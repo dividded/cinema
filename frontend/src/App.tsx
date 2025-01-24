@@ -28,12 +28,40 @@ const MovieList = styled.div`
   margin: 0 auto;
 `
 
-const MovieCard = styled.div`
-  background-color: #1a1a1a;
+const DateSection = styled.div`
+  margin-bottom: 2rem;
+`
+
+const DateHeader = styled.h3<{ isWeekend?: boolean; isMorningOnly?: boolean }>`
+  color: ${props => {
+    if (props.isWeekend) return '#ff9d00';
+    if (props.isMorningOnly) return '#ff6b6b';
+    return '#646cff';
+  }};
+  font-size: 1.2rem;
+  margin: 1rem 0;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid ${props => {
+    if (props.isWeekend) return '#ff9d00';
+    if (props.isMorningOnly) return '#ff6b6b';
+    return '#646cff';
+  }};
+`
+
+const MovieCard = styled.div<{ isWeekend?: boolean; isMorningOnly?: boolean }>`
+  background-color: ${props => {
+    if (props.isWeekend) return '#1f1a15';
+    if (props.isMorningOnly) return '#1f1515';
+    return '#1a1a1a';
+  }};
   border-radius: 6px;
   padding: 0.75rem;
   transition: transform 0.2s;
-  border: 1px solid #333;
+  border: 1px solid ${props => {
+    if (props.isWeekend) return '#3d2e1a';
+    if (props.isMorningOnly) return '#3d1a1a';
+    return '#333';
+  }};
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -41,7 +69,11 @@ const MovieCard = styled.div`
 
   &:hover {
     transform: translateX(-4px);
-    border-color: #646cff;
+    border-color: ${props => {
+      if (props.isWeekend) return '#ff9d00';
+      if (props.isMorningOnly) return '#ff6b6b';
+      return '#646cff';
+    }};
   }
 `
 
@@ -100,10 +132,33 @@ const ErrorMessage = styled.div`
   font-size: 1.2rem;
 `
 
+const SearchContainer = styled.div`
+  margin-top: 1rem;
+`
+
+const SearchInput = styled.input`
+  padding: 0.5rem;
+  border: 1px solid #333;
+  border-radius: 4px;
+  background-color: #1a1a1a;
+  color: #fff;
+  width: 100%;
+  max-width: 300px;
+`
+
+interface MoviesByDate {
+  [date: string]: {
+    movies: Movie[];
+    isWeekend: boolean;
+    isMorningOnly: boolean;
+  }
+}
+
 function App() {
   const [movies, setMovies] = useState<Movie[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
     fetch('http://localhost:8080/api/movies')
@@ -133,6 +188,84 @@ function App() {
     }, new Date(movie.screenings[0].dateTime))
   }
 
+  // Helper function to check if time is before 17:30
+  const isBeforeEvening = (timeStr: string) => {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return hours < 17 || (hours === 17 && minutes <= 30);
+  };
+
+  // Helper function to check if all screenings are before 17:30
+  const isMorningOnlyMovie = (movie: Movie) => {
+    return Array.from(movie.screenings).every(screening => {
+      const time = screening.dateTime.split(' ')[1]; // Get time part
+      return isBeforeEvening(time);
+    });
+  };
+
+  // Group movies by date
+  const groupMoviesByDate = (movies: Movie[]): MoviesByDate => {
+    const grouped: MoviesByDate = {};
+    
+    movies.forEach(movie => {
+      movie.screenings.forEach(screening => {
+        const date = screening.dateTime.split(' ')[0];
+        const [day, month, year] = date.split('-');
+        const fullDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+        const dayOfWeek = fullDate.getDay();
+        const isWeekend = dayOfWeek === 5 || dayOfWeek === 6;
+
+        if (!grouped[date]) {
+          grouped[date] = {
+            movies: [],
+            isWeekend,
+            isMorningOnly: true // Start true, will be set to false if any evening screening is found
+          };
+        }
+        
+        const existingMovie = grouped[date].movies.find(m => m.title === movie.title);
+        if (existingMovie) {
+          existingMovie.screenings.add(screening);
+        } else {
+          grouped[date].movies.push({
+            ...movie,
+            screenings: new Set([screening])
+          });
+        }
+
+        // Update isMorningOnly for the date
+        const time = screening.dateTime.split(' ')[1];
+        if (!isBeforeEvening(time)) {
+          grouped[date].isMorningOnly = false;
+        }
+      });
+    });
+
+    return grouped;
+  };
+
+  const filteredMovies = movies.filter(movie =>
+    movie.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const moviesByDate = groupMoviesByDate(filteredMovies);
+  const sortedDates = Object.keys(moviesByDate).sort((a, b) => {
+    const [dayA, monthA, yearA] = a.split('-').map(Number);
+    const [dayB, monthB, yearB] = b.split('-').map(Number);
+    return new Date(yearA, monthA - 1, dayA).getTime() - 
+           new Date(yearB, monthB - 1, dayB).getTime();
+  });
+
+  // Format date to Hebrew
+  const formatDateHebrew = (dateStr: string) => {
+    const [day, month, year] = dateStr.split('-');
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    const dayOfWeek = date.getDay();
+    
+    const daysInHebrew = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+    
+    return `${dateStr} | יום ${daysInHebrew[dayOfWeek]}`;
+  };
+
   if (loading) return <LoadingMessage>Loading movies...</LoadingMessage>
   if (error) return <ErrorMessage>{error}</ErrorMessage>
 
@@ -140,20 +273,42 @@ function App() {
     <Container>
       <Header>
         <Title>Cinema Schedule</Title>
+        <SearchContainer>
+          <SearchInput 
+            type="text"
+            placeholder="חיפוש סרט..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </SearchContainer>
       </Header>
       <MovieList>
-        {movies.map((movie, index) => (
-          <MovieCard key={index}>
-            <MovieTitle>{movie.title}</MovieTitle>
-            <ScreeningsList>
-              {movie.screenings.map((screening, idx) => (
-                <ScreeningItem key={idx}>
-                  <DateTime>{screening.dateTime}</DateTime>
-                  <Venue>{screening.venue}</Venue>
-                </ScreeningItem>
-              ))}
-            </ScreeningsList>
-          </MovieCard>
+        {sortedDates.map(date => (
+          <DateSection key={date}>
+            <DateHeader 
+              isWeekend={moviesByDate[date].isWeekend}
+              isMorningOnly={!moviesByDate[date].isWeekend && moviesByDate[date].isMorningOnly}
+            >
+              {formatDateHebrew(date)}
+            </DateHeader>
+            {moviesByDate[date].movies.map((movie, index) => (
+              <MovieCard 
+                key={`${date}-${index}`}
+                isWeekend={moviesByDate[date].isWeekend}
+                isMorningOnly={!moviesByDate[date].isWeekend && isMorningOnlyMovie(movie)}
+              >
+                <MovieTitle>{movie.title}</MovieTitle>
+                <ScreeningsList>
+                  {Array.from(movie.screenings).map((screening, idx) => (
+                    <ScreeningItem key={idx}>
+                      <DateTime>{screening.dateTime.split(' ')[1]}</DateTime>
+                      <Venue>{screening.venue}</Venue>
+                    </ScreeningItem>
+                  ))}
+                </ScreeningsList>
+              </MovieCard>
+            ))}
+          </DateSection>
         ))}
       </MovieList>
     </Container>
