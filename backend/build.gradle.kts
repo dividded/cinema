@@ -29,6 +29,9 @@ dependencies {
 	runtimeOnly("org.postgresql:postgresql")
 	testImplementation("org.springframework.boot:spring-boot-starter-test")
 	testRuntimeOnly("com.h2database:h2")
+	implementation("org.jsoup:jsoup:1.17.2")
+	testImplementation("io.mockk:mockk:1.13.9")
+	testImplementation("org.assertj:assertj-core:3.25.3")
 }
 
 tasks.withType<KotlinCompile> {
