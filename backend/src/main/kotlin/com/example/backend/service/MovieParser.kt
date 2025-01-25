@@ -51,10 +51,13 @@ class MovieParser {
                 }
                 
                 val description = content.select("div.paragraph p").firstOrNull()?.text() ?: ""
-                val altName = description.split("|").getOrNull(1)
-                    ?.substringBefore("שלושה")
-                    ?.trim()
-                    ?.takeIf { it.isNotBlank() }
+                val altName = description.split("|").getOrNull(1)?.let { afterPipe ->
+                    // Find the first sentence or until a Hebrew character
+                    val englishPart = afterPipe.trim().takeWhile { char ->
+                        !char.toString().matches("[\u0590-\u05FF]".toRegex()) // Hebrew character range
+                    }.trim()
+                    englishPart.takeIf { it.isNotBlank() }
+                }
 
                 val imgUrl = content.parent()
                     ?.select("div.img-wraper img[src$=.jpg]")

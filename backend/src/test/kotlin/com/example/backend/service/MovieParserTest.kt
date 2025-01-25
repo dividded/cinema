@@ -63,7 +63,7 @@ class MovieParserTest {
     }
 
     @Test
-    fun `should parse movie 'הבעלים לשעבר' from cinema co il correctly`() {
+    fun `should parse movie with english alt name and metadata correctly`() {
         // Given
         val htmlContent = File("src/test/resources/cinema_co_il_schedule.html")
             .readText(StandardCharsets.UTF_8)
@@ -75,7 +75,7 @@ class MovieParserTest {
         // Then
         val movie = movies.find { it.title == "הבעלים לשעבר" }
         assertThat(movie).isNotNull
-            .withFailMessage("Could not find movie 'הבעלים לשעבר' in parsed movies")
+            .withFailMessage("Could not find movie with title 'הבעלים לשעבר'")
         assertThat(movie?.year).isEqualTo(2023)
         assertThat(movie?.altName).isEqualTo("Ex-Husbands")
         assertThat(movie?.imgUrl).isEqualTo("https://www.cinema.co.il/wp-content/uploads/2024/08/הבעלים-לשעבר.jpg")
@@ -84,5 +84,22 @@ class MovieParserTest {
             assertThat(screening.dateTime).isEqualTo("2025-01-25 11:30")
             assertThat(screening.venue).isEqualTo("Cinematheque TLV")
         }
+    }
+
+    @Test
+    fun `should parse movie with english alt name from description correctly`() {
+        // Given
+        val htmlContent = File("src/test/resources/cinema_co_il_schedule.html")
+            .readText(StandardCharsets.UTF_8)
+        val document = Jsoup.parse(htmlContent)
+        
+        // When
+        val movies = MovieParser.parseFromDateHtml(document)
+
+        // Then
+        val movie = movies.find { it.title == "הסיפור של סולימן" }
+        assertThat(movie).isNotNull
+            .withFailMessage("Could not find movie with title 'הסיפור של סולימן'")
+        assertThat(movie?.altName).isEqualTo("The Story of Souleymane")
     }
 } 

@@ -69,18 +69,18 @@ const DateHeader = styled.h3<DateHeaderProps>`
 const MovieImagePreview = styled.div`
   position: absolute;
   top: 50%;
-  right: -240px;
+  right: -620px;
   transform: translateY(-50%);
   display: none;
-  width: 220px;
-  border-radius: 4px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  width: 600px;
+  border-radius: 8px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
   z-index: 10;
   
   img {
     width: 100%;
     height: auto;
-    border-radius: 4px;
+    border-radius: 8px;
     display: block;
   }
 `
@@ -109,20 +109,50 @@ const MovieCard = styled.div<MovieCardProps>`
   }
 `
 
-const MovieTitle = styled.h2`
-  color: #646cff;
-  margin: 0;
-  font-size: 1rem;
-  width: fit-content;
-  max-width: 300px;
-  text-align: right;
-  direction: rtl;
+const MovieTitleContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
 `
 
 const MovieTitleText = styled.span`
+  flex-shrink: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  display: flex;
+  flex-direction: row-reverse;
+  gap: 1rem;
+  align-items: baseline;
+`
+
+const OriginalTitle = styled.span`
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.9em;
+  font-weight: 300;
+  
+  &::after {
+    content: '/';
+    margin-left: 1rem;
+    opacity: 0.3;
+  }
+`
+
+const MovieYear = styled.span`
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.85rem;
+  font-weight: 300;
+  flex-shrink: 0;
+  direction: ltr;
+  
+  &::before {
+    content: '|';
+    margin: 0 0.75rem;
+    opacity: 0.4;
+    color: #646cff;
+  }
 `
 
 const ScreeningsList = styled.div`
@@ -398,6 +428,48 @@ function App() {
   if (loading) return <LoadingMessage>Loading movies...</LoadingMessage>
   if (error) return <ErrorMessage>Failed to load movies. Please try again later.</ErrorMessage>
 
+  const renderMovie = (movie: Movie, isWeekend: boolean, morningOnly: boolean) => {
+    return (
+      <MovieCard
+        key={movie.title + movie.screenings[0].dateTime}
+        isWeekend={isWeekend}
+        isMorningOnly={morningOnly}
+      >
+        <MovieTitleContainer>
+          <MovieTitleText>
+            {movie.altName && movie.title !== movie.altName ? (
+              <>
+                {movie.altName}
+                <OriginalTitle>{movie.title}</OriginalTitle>
+              </>
+            ) : (
+              movie.title
+            )}
+          </MovieTitleText>
+          {movie.year && <MovieYear>{movie.year}</MovieYear>}
+          {movieDatesCount[movie.title] > 1 && (
+            <MultiDateIndicator>
+              Showing on {movieDatesCount[movie.title]} dates
+            </MultiDateIndicator>
+          )}
+        </MovieTitleContainer>
+        {movie.imgUrl && (
+          <MovieImagePreview className="movie-preview">
+            <img src={movie.imgUrl} alt={movie.title} />
+          </MovieImagePreview>
+        )}
+        <ScreeningsList>
+          {movie.screenings.map((screening, index) => (
+            <ScreeningItem key={`${movie.title}-${index}`}>
+              <DateTime>{screening.dateTime.split(' ')[1]}</DateTime>
+              <Venue>{screening.venue}</Venue>
+            </ScreeningItem>
+          ))}
+        </ScreeningsList>
+      </MovieCard>
+    );
+  };
+
   return (
     <Container>
       <Header>
@@ -421,40 +493,7 @@ function App() {
               {formatDate(date)}
             </DateHeader>
             {moviesByDate[date].movies.map((movie, index) => (
-              <MovieCard 
-                key={`${date}-${index}`}
-                isWeekend={moviesByDate[date].isWeekend}
-                isMorningOnly={!moviesByDate[date].isWeekend && isMorningOnlyMovie(movie)}
-                onClick={() => movie.siteUrl && window.open(movie.siteUrl, '_blank')}
-              >
-                {movie.imgUrl && (
-                  <MovieImagePreview 
-                    className="movie-preview"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      window.open(movie.imgUrl, '_blank');
-                    }}
-                  >
-                    <img src={movie.imgUrl} alt={movie.title} />
-                  </MovieImagePreview>
-                )}
-                <MovieTitle>
-                  <MovieTitleText>{movie.title}</MovieTitleText>
-                </MovieTitle>
-                <ScreeningsList>
-                  {movieDatesCount[movie.title] > 1 && (
-                    <MultiDateIndicator>
-                      Showing on {movieDatesCount[movie.title]} dates
-                    </MultiDateIndicator>
-                  )}
-                  {movie.screenings.map((screening, index) => (
-                    <ScreeningItem key={`${date}-${index}`}>
-                      <DateTime>{screening.dateTime.split(' ')[1]}</DateTime>
-                      <Venue>{screening.venue}</Venue>
-                    </ScreeningItem>
-                  ))}
-                </ScreeningsList>
-              </MovieCard>
+              renderMovie(movie, moviesByDate[date].isWeekend, !moviesByDate[date].isWeekend && isMorningOnlyMovie(movie))
             ))}
           </DateSection>
         ))}
