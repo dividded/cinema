@@ -18,10 +18,6 @@ class MovieService {
         )
     }
 
-    private val jsoup = Jsoup.connect("https://www.cinema.co.il/shown/?date=2025-01-26")
-        .userAgent("Mozilla/5.0")
-        .timeout(10000)
-
     fun fetchMovies(): Set<Movie> {
         val allMovies = mutableSetOf<Movie>()
         
@@ -43,12 +39,15 @@ class MovieService {
         return allMovies
     }
 
-    fun fetchCinemathequeMovies(): List<Movie> {
+    fun fetchCinemathequeMovies(date: String): List<Movie> {
         try {
-            val document = jsoup.get()
+            val document = Jsoup.connect("https://www.cinema.co.il/shown/?date=$date")
+                .userAgent("Mozilla/5.0")
+                .timeout(10000)
+                .get()
             return MovieParser.parseFromDateHtml(document)
         } catch (e: Exception) {
             throw RuntimeException("Failed to fetch or parse cinematheque movies", e)
         }
     }
-} 
+}

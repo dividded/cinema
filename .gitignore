@@ -35,6 +35,13 @@ logs/
 .env.test.local
 .env.production.local
 
+# Database files
+*.db
+*.mv.db
+*.trace.db
+/data/
+/backend/data/
+
 # Temporary files
 *.tmp
-*.temp 
+*.temp

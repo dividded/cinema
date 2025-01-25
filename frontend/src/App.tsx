@@ -430,10 +430,12 @@ function App() {
 
   const renderMovie = (movie: Movie, isWeekend: boolean, morningOnly: boolean) => {
     return (
-      <MovieCard
-        key={movie.title + movie.screenings[0].dateTime}
+      <MovieCard 
+        key={`${movie.title}-${movie.screenings?.[0]?.dateTime || 'unknown'}`}
         isWeekend={isWeekend}
         isMorningOnly={morningOnly}
+        onClick={() => movie.siteUrl && window.open(movie.siteUrl, '_blank')}
+        style={{ cursor: movie.siteUrl ? 'pointer' : 'default' }}
       >
         <MovieTitleContainer>
           <MovieTitleText>
@@ -455,7 +457,7 @@ function App() {
         </MovieTitleContainer>
         {movie.imgUrl && (
           <MovieImagePreview className="movie-preview">
-            <img src={movie.imgUrl} alt={movie.title} />
+            <img src={movie.imgUrl} alt={movie.title || 'Movie'} />
           </MovieImagePreview>
         )}
         <ScreeningsList>
