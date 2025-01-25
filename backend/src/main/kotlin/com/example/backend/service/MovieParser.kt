@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service
 @Service
 class MovieParser {
     companion object {
-        fun parse(document: Document): Set<Movie> {
+        fun parse(document: Document): List<Movie> {
             val movieMap = mutableMapOf<String, Movie>()
             
             // Find all movie blocks
@@ -35,7 +35,7 @@ class MovieParser {
                 }
             }
             
-            return movieMap.values.toSet()
+            return movieMap.values.toList()
         }
 
         fun parseFromDateHtml(document: Document): List<Movie> {

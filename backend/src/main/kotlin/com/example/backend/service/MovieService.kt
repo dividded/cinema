@@ -2,12 +2,14 @@ package com.example.backend.service
 
 import com.example.backend.model.Movie
 import org.jsoup.Jsoup
+import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import java.time.Duration
 import java.lang.RuntimeException
 
 @Service
-class MovieService {
+class MovieService(private val movieParser: MovieParser) {
+    private val logger = LoggerFactory.getLogger(MovieService::class.java)
     
     companion object {
         private val CINEMA_URLS = listOf(
@@ -18,7 +20,7 @@ class MovieService {
         )
     }
 
-    fun fetchMovies(): Set<Movie> {
+    fun fetchMovies(): List<Movie> {
         val allMovies = mutableSetOf<Movie>()
         
         CINEMA_URLS.forEach { url ->
@@ -32,11 +34,9 @@ class MovieService {
                 allMovies.addAll(movies)
             } catch (e: Exception) {
                 println("Error fetching URL $url: ${e.message}")
-                // Continue with other URLs even if one fails
             }
         }
-        
-        return allMovies
+        return allMovies.toList()
     }
 
     fun fetchCinemathequeMovies(date: String): List<Movie> {
@@ -48,6 +48,24 @@ class MovieService {
             return MovieParser.parseFromDateHtml(document)
         } catch (e: Exception) {
             throw RuntimeException("Failed to fetch or parse cinematheque movies", e)
+        }
+    }
+
+    fun fetchAndParseMovies(forceRefresh: Boolean = false): List<Movie> {
+        logger.info("Fetching movies from external site. Force refresh: $forceRefresh")
+        
+        try {
+            val document = Jsoup.connect("https://www.cinema.co.il/shows/cinematheque-tlv/")
+                .get()
+            logger.info("Successfully fetched HTML from external site")
+            
+            val movies = MovieParser.parse(document)
+            logger.info("Parsed ${movies.size} movies from the fetched HTML")
+            return movies.toList()
+            
+        } catch (e: Exception) {
+            logger.error("Error fetching or parsing movies: ${e.message}", e)
+            throw e
         }
     }
 }

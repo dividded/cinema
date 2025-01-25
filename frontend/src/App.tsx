@@ -75,12 +75,13 @@ interface DateHeaderProps {
 interface MovieCardProps {
   isWeekend?: boolean;
   isMorningOnly?: boolean;
+  isOldMovie?: boolean;
 }
 
 // Update the styled components with proper typing
 const DateHeader = styled.h3<DateHeaderProps>`
   color: ${props => {
-    if (props.isWeekend) return '#ff9d00';
+    if (props.isWeekend) return '#ff7b00';
     if (props.isMorningOnly) return '#ff6b6b';
     return '#646cff';
   }};
@@ -88,7 +89,7 @@ const DateHeader = styled.h3<DateHeaderProps>`
   margin: 1rem 0;
   padding-bottom: 0.5rem;
   border-bottom: 1px solid ${props => {
-    if (props.isWeekend) return '#ff9d00';
+    if (props.isWeekend) return '#ff7b00';
     if (props.isMorningOnly) return '#ff6b6b';
     return '#646cff';
   }};
@@ -116,11 +117,21 @@ const MovieImagePreview = styled.div`
 const MovieCard = styled.div<MovieCardProps>`
   position: relative;
   cursor: pointer;
-  background-color: ${props => props.isWeekend ? '#1f1a15' : props.isMorningOnly ? '#1f1515' : '#1a1a1a'};
+  background: ${props => {
+    const baseColor = props.isWeekend ? '#1f1a15' : props.isMorningOnly ? '#1f1515' : '#1a1a1a';
+    return props.isOldMovie 
+      ? `linear-gradient(to right, ${baseColor}, ${baseColor} 97%, #1f1a0d)`
+      : baseColor;
+  }};
   border-radius: 6px;
   padding: 0.75rem;
   transition: transform 0.2s;
-  border: 1px solid ${props => props.isWeekend ? '#3d2e1a' : props.isMorningOnly ? '#3d1a1a' : '#333'};
+  border: 1px solid ${props => {
+    const baseColor = props.isWeekend ? '#1f1a15' : props.isMorningOnly ? '#3d1a1a' : '#333';
+    return props.isOldMovie 
+      ? `${baseColor} ${props.isWeekend ? '#1f1a15' : props.isMorningOnly ? '#3d1a1a' : '#3d2e0d'}`
+      : baseColor;
+  }};
   display: flex;
   flex-direction: row-reverse;
   justify-content: space-between;
@@ -129,7 +140,12 @@ const MovieCard = styled.div<MovieCardProps>`
 
   &:hover {
     transform: translateX(-4px);
-    border-color: ${props => props.isWeekend ? '#ff9d00' : props.isMorningOnly ? '#ff6b6b' : '#646cff'};
+    border-color: ${props => {
+      const baseColor = props.isWeekend ? '#1f1a15' : props.isMorningOnly ? '#ff6b6b' : '#646cff';
+      return props.isOldMovie 
+        ? `${baseColor} #ffd700`
+        : baseColor;
+    }};
     
     .movie-preview {
       display: block;
@@ -144,7 +160,7 @@ const MovieTitleContainer = styled.div`
   min-width: 0;
 `
 
-const MovieTitleText = styled.span`
+const MovieTitleText = styled.span<{ isOldMovie?: boolean }>`
   flex-shrink: 1;
   min-width: 0;
   overflow: hidden;
@@ -154,6 +170,7 @@ const MovieTitleText = styled.span`
   flex-direction: row-reverse;
   gap: 1rem;
   align-items: baseline;
+  color: ${props => props.isOldMovie ? '#ffd700' : 'inherit'};
 `
 
 const OriginalTitle = styled.span`
@@ -169,7 +186,7 @@ const OriginalTitle = styled.span`
 `
 
 const MovieYear = styled.span`
-  color: rgba(255, 255, 255, 0.75);
+  color: ${props => props.isOldMovie ? '#ffd700' : 'rgba(255, 255, 255, 0.75)'};
   font-size: 0.85rem;
   font-weight: 300;
   flex-shrink: 0;
@@ -431,10 +448,7 @@ function App() {
 
   const moviesByDate = groupMoviesByDate(filteredMovies);
   const sortedDates = Object.keys(moviesByDate).sort((a, b) => {
-    const [dayA, monthA, yearA] = a.split('-').map(Number);
-    const [dayB, monthB, yearB] = b.split('-').map(Number);
-    return new Date(yearA, monthA - 1, dayA).getTime() - 
-           new Date(yearB, monthB - 1, dayB).getTime();
+    return a.localeCompare(b);
   });
 
   // Format date to Hebrew
@@ -476,11 +490,14 @@ function App() {
   if (error) return <ErrorMessage>Failed to load movies. Please try again later.</ErrorMessage>
 
   const renderMovie = (movie: Movie, isWeekend: boolean, morningOnly: boolean) => {
+    const isOldMovie = movie.year ? movie.year < 2020 : false;
+    
     return (
       <MovieCard 
         key={`${movie.title}-${movie.screenings?.[0]?.dateTime || 'unknown'}`}
         isWeekend={isWeekend}
         isMorningOnly={morningOnly}
+        isOldMovie={isOldMovie}
         onClick={() => movie.siteUrl && window.open(movie.siteUrl, '_blank')}
         style={{ cursor: movie.siteUrl ? 'pointer' : 'default' }}
       >
@@ -496,7 +513,7 @@ function App() {
           </MovieImagePreview>
         )}
         <MovieTitleContainer>
-          <MovieTitleText>
+          <MovieTitleText isOldMovie={isOldMovie}>
             {movie.altName && movie.title !== movie.altName ? (
               <>
                 {movie.altName}
@@ -506,7 +523,7 @@ function App() {
               movie.title
             )}
           </MovieTitleText>
-          {movie.year && <MovieYear>{movie.year}</MovieYear>}
+          {movie.year && <MovieYear isOldMovie={isOldMovie}>{movie.year}</MovieYear>}
         </MovieTitleContainer>
         <ScreeningsList>
           {movieDatesCount[movie.title] > 1 && (
