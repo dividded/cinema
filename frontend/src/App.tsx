@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import styled from '@emotion/styled'
-import { Movie } from './types/movie'
+import { Movie, Screening } from './types/movie'
 
 const Container = styled.div`
   min-height: 100vh;
@@ -38,7 +38,19 @@ const DateSection = styled.div`
   margin-bottom: 2rem;
 `
 
-const DateHeader = styled.h3<{ isWeekend?: boolean; isMorningOnly?: boolean }>`
+// Add interfaces for the styled component props
+interface DateHeaderProps {
+  isWeekend?: boolean;
+  isMorningOnly?: boolean;
+}
+
+interface MovieCardProps {
+  isWeekend?: boolean;
+  isMorningOnly?: boolean;
+}
+
+// Update the styled components with proper typing
+const DateHeader = styled.h3<DateHeaderProps>`
   color: ${props => {
     if (props.isWeekend) return '#ff9d00';
     if (props.isMorningOnly) return '#ff6b6b';
@@ -54,7 +66,7 @@ const DateHeader = styled.h3<{ isWeekend?: boolean; isMorningOnly?: boolean }>`
   }};
 `
 
-const MovieCard = styled.div`
+const MovieCard = styled.div<MovieCardProps>`
   background-color: ${props => props.isWeekend ? '#1f1a15' : props.isMorningOnly ? '#1f1515' : '#1a1a1a'};
   border-radius: 6px;
   padding: 0.75rem;
@@ -219,7 +231,7 @@ function App() {
   const getEarliestScreeningDate = (movie: Movie): Date => {
     if (!movie.screenings.length) return new Date(8640000000000000)
     
-    return movie.screenings.reduce((earliest, screening) => {
+    return Array.from(movie.screenings).reduce((earliest, screening) => {
       const screeningDate = new Date(screening.dateTime)
       return screeningDate < earliest ? screeningDate : earliest
     }, new Date(movie.screenings[0].dateTime))
@@ -261,11 +273,11 @@ function App() {
         
         const existingMovie = grouped[date].movies.find(m => m.title === movie.title);
         if (existingMovie) {
-          existingMovie.screenings.add(screening);
+          existingMovie.screenings.push(screening);
         } else {
           grouped[date].movies.push({
             ...movie,
-            screenings: new Set([screening])
+            screenings: [screening]
           });
         }
 
@@ -279,8 +291,8 @@ function App() {
     // Sort movies within each date by their earliest screening
     Object.values(grouped).forEach(dateGroup => {
       dateGroup.movies.sort((a, b) => {
-        const aTime = getEarliestScreeningTime(Array.from(a.screenings));
-        const bTime = getEarliestScreeningTime(Array.from(b.screenings));
+        const aTime = getEarliestScreeningTime(a.screenings);
+        const bTime = getEarliestScreeningTime(b.screenings);
         return compareTimeStrings(aTime, bTime);
       });
     });
@@ -384,15 +396,17 @@ function App() {
                 isWeekend={moviesByDate[date].isWeekend}
                 isMorningOnly={!moviesByDate[date].isWeekend && isMorningOnlyMovie(movie)}
               >
-                <MovieTitle>{movie.title}</MovieTitle>
+                <MovieTitle>
+                  <MovieTitleText>{movie.title}</MovieTitleText>
+                </MovieTitle>
                 <ScreeningsList>
                   {movieDatesCount[movie.title] > 1 && (
                     <MultiDateIndicator>
                       Showing on {movieDatesCount[movie.title]} dates
                     </MultiDateIndicator>
                   )}
-                  {Array.from(movie.screenings).map((screening, idx) => (
-                    <ScreeningItem key={idx}>
+                  {movie.screenings.map((screening, index) => (
+                    <ScreeningItem key={`${date}-${index}`}>
                       <DateTime>{screening.dateTime.split(' ')[1]}</DateTime>
                       <Venue>{screening.venue}</Venue>
                     </ScreeningItem>
