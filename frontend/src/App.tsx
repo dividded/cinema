@@ -7,6 +7,7 @@ const Container = styled.div`
   background: linear-gradient(160deg, #13151a 0%, #1a1d23 100%);
   color: #fff;
   padding: 1rem;
+  font-size: 1.1rem;
 `
 
 const Header = styled.header`
@@ -23,7 +24,7 @@ const Header = styled.header`
 
 const Title = styled.h1`
   color: #646cff;
-  font-size: 2.5rem;
+  font-size: 2.8rem;
   margin: 0 0 1.5rem 0;
   font-weight: 600;
   letter-spacing: -0.5px;
@@ -83,7 +84,7 @@ const DateHeader = styled.h3<DateHeaderProps>`
     if (props.isMorningOnly) return '#ff6b6b';
     return '#646cff';
   }};
-  font-size: 1.2rem;
+  font-size: 1.4rem;
   margin: 1rem 0;
   padding-bottom: 0.5rem;
   border-bottom: 1px solid ${props => {
@@ -96,18 +97,18 @@ const DateHeader = styled.h3<DateHeaderProps>`
 const MovieImagePreview = styled.div`
   position: absolute;
   top: 50%;
-  right: -620px;
+  right: -420px;
   transform: translateY(-50%);
   display: none;
-  width: 600px;
-  border-radius: 8px;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+  width: 400px;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
   z-index: 10;
   
   img {
     width: 100%;
     height: auto;
-    border-radius: 8px;
+    border-radius: 4px;
     display: block;
   }
 `
@@ -185,7 +186,7 @@ const MovieYear = styled.span`
 const MultiDateIndicator = styled.span`
   background-color: rgba(255, 255, 255, 0.1);
   color: #646cff;
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   padding: 0.2rem 0.5rem;
   border-radius: 4px;
   border: 1px solid rgba(100, 108, 255, 0.3);
@@ -210,7 +211,7 @@ const ScreeningItem = styled.div`
   display: flex;
   gap: 0.5rem;
   align-items: center;
-  font-size: 0.875rem;
+  font-size: 1rem;
   border: 1px solid rgba(255, 255, 255, 0.1);
   direction: ltr;
 `
@@ -221,7 +222,7 @@ const DateTime = styled.span`
 
 const Venue = styled.span`
   color: rgba(255, 255, 255, 0.7);
-  font-size: 0.75rem;
+  font-size: 0.9rem;
 `
 
 const LoadingMessage = styled.div`
@@ -424,7 +425,8 @@ function App() {
   };
 
   const filteredMovies = movies.filter(movie =>
-    movie.title.toLowerCase().includes(searchQuery.toLowerCase())
+    movie.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (movie.altName?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
   );
 
   const moviesByDate = groupMoviesByDate(filteredMovies);
@@ -482,12 +484,18 @@ function App() {
         onClick={() => movie.siteUrl && window.open(movie.siteUrl, '_blank')}
         style={{ cursor: movie.siteUrl ? 'pointer' : 'default' }}
       >
+        {movie.imgUrl && (
+          <MovieImagePreview 
+            className="movie-preview"
+            onClick={(e) => {
+              e.stopPropagation();
+              window.open(movie.imgUrl, '_blank');
+            }}
+          >
+            <img src={movie.imgUrl} alt={movie.title} />
+          </MovieImagePreview>
+        )}
         <MovieTitleContainer>
-          {movieDatesCount[movie.title] > 1 && (
-            <MultiDateIndicator>
-              Showing on {movieDatesCount[movie.title]} dates
-            </MultiDateIndicator>
-          )}
           <MovieTitleText>
             {movie.altName && movie.title !== movie.altName ? (
               <>
@@ -500,12 +508,12 @@ function App() {
           </MovieTitleText>
           {movie.year && <MovieYear>{movie.year}</MovieYear>}
         </MovieTitleContainer>
-        {movie.imgUrl && (
-          <MovieImagePreview className="movie-preview">
-            <img src={movie.imgUrl} alt={movie.title || 'Movie'} />
-          </MovieImagePreview>
-        )}
         <ScreeningsList>
+          {movieDatesCount[movie.title] > 1 && (
+            <MultiDateIndicator>
+              Showing on {movieDatesCount[movie.title]} dates
+            </MultiDateIndicator>
+          )}
           {movie.screenings.map((screening, index) => (
             <ScreeningItem key={`${movie.title}-${index}`}>
               <DateTime>{screening.dateTime.split(' ')[1]}</DateTime>
