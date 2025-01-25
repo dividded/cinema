@@ -1,0 +1,12 @@
+{
+  "name": "cinema-project",
+  "private": true,
+  "scripts": {
+    "backend": "cd backend && ./gradlew bootRun",
+    "frontend": "cd frontend && yarn dev",
+    "dev": "concurrently \"npm run backend\" \"npm run frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+} 
