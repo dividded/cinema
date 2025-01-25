@@ -8,7 +8,10 @@ export interface Screening {
 export interface Movie {
   title: string;
   originalTitle?: string;
+  altName?: string;
   year?: number;
   durationMinutes?: number;
+  imgUrl?: string;
+  siteUrl?: string;
   screenings: Screening[];
 } 

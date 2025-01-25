@@ -66,7 +66,28 @@ const DateHeader = styled.h3<DateHeaderProps>`
   }};
 `
 
+const MovieImagePreview = styled.div`
+  position: absolute;
+  top: 50%;
+  right: -240px;
+  transform: translateY(-50%);
+  display: none;
+  width: 220px;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  z-index: 10;
+  
+  img {
+    width: 100%;
+    height: auto;
+    border-radius: 4px;
+    display: block;
+  }
+`
+
 const MovieCard = styled.div<MovieCardProps>`
+  position: relative;
+  cursor: pointer;
   background-color: ${props => props.isWeekend ? '#1f1a15' : props.isMorningOnly ? '#1f1515' : '#1a1a1a'};
   border-radius: 6px;
   padding: 0.75rem;
@@ -81,6 +102,10 @@ const MovieCard = styled.div<MovieCardProps>`
   &:hover {
     transform: translateX(-4px);
     border-color: ${props => props.isWeekend ? '#ff9d00' : props.isMorningOnly ? '#ff6b6b' : '#646cff'};
+    
+    .movie-preview {
+      display: block;
+    }
   }
 `
 
@@ -210,8 +235,13 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
-    fetch('http://localhost:8080/api/movies')
-      .then(response => response.json())
+    fetch('http://localhost:8080/api/movies/cinematheque')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
       .then(data => {
         const sortedMovies = data.sort((a: Movie, b: Movie) => {
           const aDate = getEarliestScreeningDate(a)
@@ -395,7 +425,19 @@ function App() {
                 key={`${date}-${index}`}
                 isWeekend={moviesByDate[date].isWeekend}
                 isMorningOnly={!moviesByDate[date].isWeekend && isMorningOnlyMovie(movie)}
+                onClick={() => movie.siteUrl && window.open(movie.siteUrl, '_blank')}
               >
+                {movie.imgUrl && (
+                  <MovieImagePreview 
+                    className="movie-preview"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.open(movie.imgUrl, '_blank');
+                    }}
+                  >
+                    <img src={movie.imgUrl} alt={movie.title} />
+                  </MovieImagePreview>
+                )}
                 <MovieTitle>
                   <MovieTitleText>{movie.title}</MovieTitleText>
                 </MovieTitle>

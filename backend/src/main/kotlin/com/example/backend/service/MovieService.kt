@@ -4,6 +4,7 @@ import com.example.backend.model.Movie
 import org.jsoup.Jsoup
 import org.springframework.stereotype.Service
 import java.time.Duration
+import java.lang.RuntimeException
 
 @Service
 class MovieService {
@@ -16,6 +17,10 @@ class MovieService {
             "https://www.cinema.co.il/%d7%a1%d7%a8%d7%98-%d7%94%d7%a8%d7%a6%d7%90%d7%94/"
         )
     }
+
+    private val jsoup = Jsoup.connect("https://www.cinema.co.il/shown/?date=2025-01-26")
+        .userAgent("Mozilla/5.0")
+        .timeout(10000)
 
     fun fetchMovies(): Set<Movie> {
         val allMovies = mutableSetOf<Movie>()
@@ -36,5 +41,14 @@ class MovieService {
         }
         
         return allMovies
+    }
+
+    fun fetchCinemathequeMovies(): List<Movie> {
+        try {
+            val document = jsoup.get()
+            return MovieParser.parseFromDateHtml(document)
+        } catch (e: Exception) {
+            throw RuntimeException("Failed to fetch or parse cinematheque movies", e)
+        }
     }
 } 
