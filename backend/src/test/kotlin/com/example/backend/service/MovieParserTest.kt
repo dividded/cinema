@@ -61,4 +61,28 @@ class MovieParserTest {
             .withFailMessage("Found duplicate movies: ${movies.groupBy { it.title }.filter { it.value.size > 1 }.keys}")
             .isEqualTo(movies.size)
     }
+
+    @Test
+    fun `should parse movie 'הבעלים לשעבר' from cinema co il correctly`() {
+        // Given
+        val htmlContent = File("src/test/resources/cinema_co_il_schedule.html")
+            .readText(StandardCharsets.UTF_8)
+        val document = Jsoup.parse(htmlContent)
+        
+        // When
+        val movies = MovieParser.parseFromDateHtml(document)
+
+        // Then
+        val movie = movies.find { it.title == "הבעלים לשעבר" }
+        assertThat(movie).isNotNull
+            .withFailMessage("Could not find movie 'הבעלים לשעבר' in parsed movies")
+        assertThat(movie?.year).isEqualTo(2023)
+        assertThat(movie?.altName).isEqualTo("Ex-Husbands")
+        assertThat(movie?.imgUrl).isEqualTo("https://www.cinema.co.il/wp-content/uploads/2024/08/הבעלים-לשעבר.jpg")
+        assertThat(movie?.siteUrl).isEqualTo("https://www.cinema.co.il/event/%d7%94%d7%91%d7%a2%d7%9c%d7%99%d7%9d-%d7%9c%d7%a9%d7%a2%d7%91%d7%a8/")
+        assertThat(movie?.screenings).anySatisfy { screening ->
+            assertThat(screening.dateTime).isEqualTo("2025-01-25 11:30")
+            assertThat(screening.venue).isEqualTo("Cinematheque TLV")
+        }
+    }
 } 

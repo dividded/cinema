@@ -37,5 +37,47 @@ class MovieParser {
             
             return movieMap.values.toSet()
         }
+
+        fun parseFromDateHtml(document: Document): List<Movie> {
+            val dateText = document.select("span.main-date").text()
+                .split(" ")[1]  // "שבת 25.01.25" -> "25.01.25"
+                .split(".")     // ["25", "01", "25"]
+                .let { parts -> "20${parts[2]}-${parts[1]}-${parts[0]}" }  // "2025-01-25"
+
+            return document.select("div.text-content").map { content ->
+                val titleElement = content.select("div.title")
+                val yearMatch = titleElement.select("p").text().let { text ->
+                    "\\d{4}".toRegex().find(text)?.value?.toIntOrNull()
+                }
+                
+                val description = content.select("div.paragraph p").firstOrNull()?.text() ?: ""
+                val altName = description.split("|").getOrNull(1)
+                    ?.substringBefore("שלושה")
+                    ?.trim()
+                    ?.takeIf { it.isNotBlank() }
+
+                val imgUrl = content.parent()
+                    ?.select("div.img-wraper img[src$=.jpg]")
+                    ?.firstOrNull()
+                    ?.attr("src")
+
+                val siteUrl = titleElement.select("h3 a").firstOrNull()?.attr("href")
+                
+                Movie(
+                    title = titleElement.select("h3 a").text().trim(),
+                    altName = altName,
+                    year = yearMatch,
+                    imgUrl = imgUrl,
+                    siteUrl = siteUrl,
+                    screenings = content.select("a.cal_link span.time")
+                        .map { time ->
+                            Screening(
+                                dateTime = "$dateText ${time.text()}",
+                                venue = "Cinematheque TLV"
+                            )
+                        }.toMutableSet()
+                )
+            }
+        }
     }
 } 
