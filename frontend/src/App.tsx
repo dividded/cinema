@@ -15,6 +15,10 @@ const Header = styled.header`
   padding: 2rem 1rem;
   background: linear-gradient(180deg, rgba(19,21,26,0) 0%, rgba(19,21,26,1) 100%);
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
 `
 
 const Title = styled.h1`
@@ -24,6 +28,29 @@ const Title = styled.h1`
   font-weight: 600;
   letter-spacing: -0.5px;
   text-shadow: 0 0 20px rgba(100, 108, 255, 0.3);
+`
+
+const RefreshButton = styled.button`
+  background: #646cff;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background: #7c83ff;
+  }
+
+  &:disabled {
+    background: #4a4a4a;
+    cursor: not-allowed;
+  }
 `
 
 const MovieList = styled.div`
@@ -155,6 +182,18 @@ const MovieYear = styled.span`
   }
 `
 
+const MultiDateIndicator = styled.span`
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #646cff;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid rgba(100, 108, 255, 0.3);
+  direction: ltr;
+  white-space: nowrap;
+  order: -1;
+`
+
 const ScreeningsList = styled.div`
   display: flex;
   flex-wrap: wrap;
@@ -238,18 +277,6 @@ const SearchInput = styled.input`
   }
 `
 
-const MultiDateIndicator = styled.span`
-  background-color: rgba(255, 255, 255, 0.1);
-  color: #646cff;
-  font-size: 0.75rem;
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-  border: 1px solid rgba(100, 108, 255, 0.3);
-  direction: ltr;
-  white-space: nowrap;
-  margin-right: 1rem;
-`
-
 interface MoviesByDate {
   [date: string]: {
     movies: Movie[];
@@ -263,29 +290,47 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [refreshing, setRefreshing] = useState(false)
+
+  const fetchMovies = async () => {
+    try {
+      const response = await fetch('http://localhost:8080/api/movies/cinematheque')
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      const data = await response.json()
+      setMovies(data)
+      setLoading(false)
+      setError(null)
+    } catch (err) {
+      setError('Failed to fetch movies')
+      setLoading(false)
+      console.error('Error fetching movies:', err)
+    }
+  }
+
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    try {
+      const response = await fetch('http://localhost:8080/api/movies/cinematheque/invalidate', {
+        method: 'POST'
+      })
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      const data = await response.json()
+      setMovies(data)
+      setError(null)
+    } catch (err) {
+      setError('Failed to refresh movies')
+      console.error('Error refreshing movies:', err)
+    } finally {
+      setRefreshing(false)
+    }
+  }
 
   useEffect(() => {
-    fetch('http://localhost:8080/api/movies/cinematheque')
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-      })
-      .then(data => {
-        const sortedMovies = data.sort((a: Movie, b: Movie) => {
-          const aDate = getEarliestScreeningDate(a)
-          const bDate = getEarliestScreeningDate(b)
-          return aDate.getTime() - bDate.getTime()
-        })
-        setMovies(sortedMovies)
-        setLoading(false)
-      })
-      .catch(err => {
-        setError('Failed to fetch movies')
-        setLoading(false)
-        console.error('Error fetching movies:', err)
-      })
+    fetchMovies()
   }, [])
 
   const getEarliestScreeningDate = (movie: Movie): Date => {
@@ -438,6 +483,11 @@ function App() {
         style={{ cursor: movie.siteUrl ? 'pointer' : 'default' }}
       >
         <MovieTitleContainer>
+          {movieDatesCount[movie.title] > 1 && (
+            <MultiDateIndicator>
+              Showing on {movieDatesCount[movie.title]} dates
+            </MultiDateIndicator>
+          )}
           <MovieTitleText>
             {movie.altName && movie.title !== movie.altName ? (
               <>
@@ -449,11 +499,6 @@ function App() {
             )}
           </MovieTitleText>
           {movie.year && <MovieYear>{movie.year}</MovieYear>}
-          {movieDatesCount[movie.title] > 1 && (
-            <MultiDateIndicator>
-              Showing on {movieDatesCount[movie.title]} dates
-            </MultiDateIndicator>
-          )}
         </MovieTitleContainer>
         {movie.imgUrl && (
           <MovieImagePreview className="movie-preview">
@@ -476,6 +521,9 @@ function App() {
     <Container>
       <Header>
         <Title>Cinema Schedule</Title>
+        <RefreshButton onClick={handleRefresh} disabled={refreshing}>
+          {refreshing ? 'Refreshing...' : 'Refresh Movies'}
+        </RefreshButton>
         <SearchContainer>
           <SearchInput 
             type="text"
