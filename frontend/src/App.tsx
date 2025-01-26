@@ -368,9 +368,13 @@ function App() {
 
   // Helper function to check if all screenings are before 17:30
   const isMorningOnlyMovie = (movie: Movie) => {
-    return Array.from(movie.screenings).every(screening => {
-      const time = screening.dateTime.split(' ')[1]; // Get time part
-      return isBeforeEvening(time);
+    if (movie.screenings.length === 0) return false;
+    
+    return movie.screenings.every(screening => {
+      // Parse the ISO datetime format "2025-02-02 18:30"
+      const timeStr = screening.dateTime.split(' ')[1];  // Gets "18:30"
+      const [hours] = timeStr.split(':').map(Number);    // Gets 18
+      return hours < 17;  // Simplified evening check
     });
   };
 
@@ -380,11 +384,11 @@ function App() {
     
     movies.forEach(movie => {
       movie.screenings.forEach(screening => {
-        const date = screening.dateTime.split(' ')[0];
-        const [day, month, year] = date.split('-');
-        const fullDate = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-        const dayOfWeek = fullDate.getDay();
-        const isWeekend = dayOfWeek === 5 || dayOfWeek === 6;
+        const date = screening.dateTime.split(' ')[0];  // "2025-02-02"
+        const [year, month, day] = date.split('-').map(Number);
+        const fullDate = new Date(year, month - 1, day);
+        const dayOfWeek = fullDate.getDay();  // 0 is Sunday, 6 is Saturday
+        const isWeekend = dayOfWeek === 5 || dayOfWeek === 6;  // Friday is 5, Saturday is 6
 
         if (!grouped[date]) {
           grouped[date] = {
@@ -453,9 +457,9 @@ function App() {
 
   // Format date to Hebrew
   const formatDate = (dateStr: string) => {
-    const [day, month, year] = dateStr.split('-');
-    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
-    const dayOfWeek = date.getDay();
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const date = new Date(year, month - 1, day);  // month is 0-based in JS Date
+    const dayOfWeek = date.getDay();  // 0 is Sunday, 6 is Saturday
     
     const daysInHebrew = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
     
