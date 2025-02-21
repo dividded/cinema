@@ -36,7 +36,9 @@ function App() {
 
   const fetchMovies = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/movies/cinematheque')
+      // Get the current host's IP/hostname from the window location
+      const baseUrl = window.location.hostname
+      const response = await fetch(`http://${baseUrl}:8080/api/movies/cinematheque`)
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }

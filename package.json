@@ -3,7 +3,7 @@
   "private": true,
   "scripts": {
     "backend": "cd backend && ./gradlew bootRun",
-    "frontend": "cd frontend && yarn dev",
+    "frontend": "cd frontend && yarn dev --host",
     "dev": "concurrently \"yarn backend\" \"yarn frontend\"",
     "backend:test": "cd backend && ./gradlew test"
   },
