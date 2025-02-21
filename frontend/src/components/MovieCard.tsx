@@ -6,7 +6,8 @@ import {
   MovieTitleContainer,
   MovieTitleText,
   OriginalTitle,
-  MovieYear
+  MovieYear,
+  LinkButton
 } from './styled/MovieCard';
 import {
   ScreeningsList,
@@ -15,6 +16,7 @@ import {
   Venue,
   MultiDateIndicator
 } from './styled/Screening';
+import { FaExternalLinkAlt } from 'react-icons/fa';
 
 interface MovieCardProps {
   movie: Movie;
@@ -36,8 +38,6 @@ export const MovieCard: React.FC<MovieCardProps> = ({
       isWeekend={isWeekend}
       isMorningOnly={isMorningOnly}
       isOldMovie={isOldMovie}
-      onClick={() => movie.siteUrl && window.open(movie.siteUrl, '_blank')}
-      style={{ cursor: movie.siteUrl ? 'pointer' : 'default' }}
     >
       {movie.imgUrl && (
         <MovieImagePreview>
@@ -70,6 +70,11 @@ export const MovieCard: React.FC<MovieCardProps> = ({
           </ScreeningItem>
         ))}
       </ScreeningsList>
+      {movie.siteUrl && (
+        <LinkButton onClick={() => window.open(movie.siteUrl, '_blank')}>
+          <FaExternalLinkAlt />
+        </LinkButton>
+      )}
     </StyledMovieCard>
   );
 }; 

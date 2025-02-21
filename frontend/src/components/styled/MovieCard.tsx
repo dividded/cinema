@@ -32,7 +32,7 @@ export const MovieImagePreview = styled.div`
 
 export const MovieCard = styled.div<MovieCardProps>`
   position: relative;
-  cursor: pointer;
+  cursor: default;
   background: ${props => {
     const baseColor = props.isWeekend ? '#1f1a15' : props.isMorningOnly ? '#1f1515' : '#1a1a1a';
     return props.isOldMovie 
@@ -82,4 +82,32 @@ export const MovieTitleContainer = styled.div`
   display: flex;
   align-items: flex-start;
   gap: 1rem;
+`
+
+export const LinkButton = styled.button`
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  border: none;
+  border-radius: 50%;
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 0;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.2);
+    transform: scale(1.05);
+  }
+
+  svg {
+    width: 1.2rem;
+    height: 1.2rem;
+    color: rgba(255, 255, 255, 0.9);
+  }
 `
