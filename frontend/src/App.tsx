@@ -10,7 +10,8 @@ import {
 } from './components/styled/Layout'
 import {
   SearchContainer,
-  SearchInput
+  SearchInput,
+  FilterLabel
 } from './components/styled/Controls'
 import { DateHeader } from './components/styled/DateHeader'
 import {
@@ -30,6 +31,7 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [showOldMoviesOnly, setShowOldMoviesOnly] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
 
   const fetchMovies = async () => {
@@ -53,10 +55,18 @@ function App() {
     fetchMovies()
   }, [])
 
-  const filteredMovies = movies.filter(movie =>
-    movie.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (movie.altName?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false)
-  );
+  const filteredMovies = movies.filter(movie => {
+    const matchesSearch = movie.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (movie.altName?.toLowerCase().includes(searchQuery.toLowerCase()) ?? false);
+    
+    if (!matchesSearch) return false;
+    
+    if (showOldMoviesOnly) {
+      return movie.year ? movie.year < 2020 : false;
+    }
+    
+    return true;
+  });
 
   const moviesByDate = groupMoviesByDate(filteredMovies);
   const sortedDates = Object.keys(moviesByDate).sort((a, b) => a.localeCompare(b));
@@ -76,6 +86,14 @@ function App() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
+          <FilterLabel>
+            <input
+              type="checkbox"
+              checked={showOldMoviesOnly}
+              onChange={(e) => setShowOldMoviesOnly(e.target.checked)}
+            />
+            Old Movies
+          </FilterLabel>
         </SearchContainer>
       </Header>
       <MovieList>
