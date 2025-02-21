@@ -72,7 +72,7 @@ function App() {
   const sortedDates = Object.keys(moviesByDate).sort((a, b) => a.localeCompare(b));
   const movieDatesCount = getMovieDatesCount(movies);
 
-  if (loading) return <LoadingMessage>Loading movies...</LoadingMessage>
+  if (loading) return <LoadingMessage />
   if (error) return <ErrorMessage>Failed to load movies. Please try again later.</ErrorMessage>
 
   return (

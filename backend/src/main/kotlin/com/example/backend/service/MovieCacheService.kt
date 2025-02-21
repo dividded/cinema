@@ -9,6 +9,7 @@ import com.fasterxml.jackson.module.kotlin.registerKotlinModule
 import org.springframework.stereotype.Service
 import java.time.Duration
 import java.time.Instant
+import kotlin.random.Random
 
 @Service
 class MovieCacheService(
@@ -16,7 +17,13 @@ class MovieCacheService(
     private val objectMapper: ObjectMapper = ObjectMapper().registerKotlinModule()
 ) {
     companion object {
-        private val CACHE_DURATION = Duration.ofMinutes(30)
+        private const val MIN_CACHE_MINUTES = 30L
+        private const val MAX_CACHE_MINUTES = 45L
+        
+        private fun getRandomCacheDuration(): Duration {
+            val minutes = Random.nextLong(MIN_CACHE_MINUTES, MAX_CACHE_MINUTES + 1)
+            return Duration.ofMinutes(minutes)
+        }
     }
 
     fun getCachedMovies(): List<Movie>? {
@@ -32,7 +39,8 @@ class MovieCacheService(
 
     private fun isCacheExpired(cache: MovieCache): Boolean {
         val now = Instant.now()
-        val expirationTime = cache.createdAt.plus(CACHE_DURATION)
+        val cacheDuration = getRandomCacheDuration()
+        val expirationTime = cache.createdAt.plus(cacheDuration)
         return now.isAfter(expirationTime)
     }
 
