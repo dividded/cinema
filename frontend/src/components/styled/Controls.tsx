@@ -1,7 +1,7 @@
 import styled from '@emotion/styled'
 
 export const SearchContainer = styled.div`
-  margin: 0 auto;
+  margin: 0 auto 2rem auto;
   max-width: 600px;
   width: 100%;
   position: relative;
