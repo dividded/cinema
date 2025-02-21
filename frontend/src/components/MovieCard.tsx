@@ -40,13 +40,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
       style={{ cursor: movie.siteUrl ? 'pointer' : 'default' }}
     >
       {movie.imgUrl && (
-        <MovieImagePreview
-          className="movie-preview"
-          onClick={(e) => {
-            e.stopPropagation();
-            window.open(movie.imgUrl, '_blank');
-          }}
-        >
+        <MovieImagePreview>
           <img src={movie.imgUrl} alt={movie.title} />
         </MovieImagePreview>
       )}

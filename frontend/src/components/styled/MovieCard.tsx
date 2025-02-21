@@ -16,15 +16,11 @@ interface MovieYearProps {
 }
 
 export const MovieImagePreview = styled.div`
-  position: absolute;
-  top: 50%;
-  right: -420px;
-  transform: translateY(-50%);
-  display: none;
-  width: 400px;
+  position: relative;
+  width: 100%;
+  margin-bottom: 1rem;
   border-radius: 4px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-  z-index: 10;
   
   img {
     width: 100%;
@@ -44,8 +40,7 @@ export const MovieCard = styled.div<MovieCardProps>`
       : baseColor;
   }};
   border-radius: 6px;
-  padding: 0.75rem;
-  transition: transform 0.2s;
+  padding: 1rem;
   border: 1px solid ${props => {
     const baseColor = props.isWeekend ? '#1f1a15' : props.isMorningOnly ? '#3d1a1a' : '#333';
     return props.isOldMovie 
@@ -53,69 +48,38 @@ export const MovieCard = styled.div<MovieCardProps>`
       : baseColor;
   }};
   display: flex;
-  flex-direction: row-reverse;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  gap: 1rem;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+`
 
-  &:hover {
-    transform: translateX(-4px);
-    border-color: ${props => {
-      const baseColor = props.isWeekend ? '#1f1a15' : props.isMorningOnly ? '#ff6b6b' : '#646cff';
-      return props.isOldMovie 
-        ? `${baseColor} #ffd700`
-        : baseColor;
-    }};
-    
-    .movie-preview {
-      display: block;
-    }
-  }
+export const MovieTitleText = styled.h2<{ isOldMovie: boolean }>`
+  font-size: 1.5rem;
+  line-height: 1.3;
+  color: ${props => props.isOldMovie ? '#ffd700' : '#fff'};
+  margin: 0;
+  flex: 1;
+`
+
+export const OriginalTitle = styled.span`
+  display: block;
+  font-size: 1.2rem;
+  color: #999;
+  margin-top: 0.3rem;
+`
+
+export const MovieYear = styled.span<{ isOldMovie: boolean }>`
+  font-size: 1.2rem;
+  color: ${props => props.isOldMovie ? '#000' : '#fff'};
+  flex-shrink: 0;
+  padding: 0.3rem 0.8rem;
+  background: ${props => props.isOldMovie ? '#ffd700' : '#444'};
+  border-radius: 6px;
+  font-weight: 500;
 `
 
 export const MovieTitleContainer = styled.div`
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-width: 0;
-`
-
-export const MovieTitleText = styled.span<MovieTitleTextProps>`
-  flex-shrink: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  display: flex;
-  flex-direction: row-reverse;
+  align-items: flex-start;
   gap: 1rem;
-  align-items: baseline;
-  color: ${props => props.isOldMovie ? '#ffd700' : 'inherit'};
 `
-
-export const OriginalTitle = styled.span`
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 0.9em;
-  font-weight: 300;
-  
-  &::after {
-    content: '/';
-    margin-left: 1rem;
-    opacity: 0.3;
-  }
-`
-
-export const MovieYear = styled.span<MovieYearProps>`
-  color: ${props => props.isOldMovie ? '#ffd700' : 'rgba(255, 255, 255, 0.75)'};
-  font-size: 0.85rem;
-  font-weight: 300;
-  flex-shrink: 0;
-  direction: ltr;
-  
-  &::before {
-    content: '|';
-    margin: 0 0.75rem;
-    opacity: 0.4;
-    color: #646cff;
-  }
-` 
