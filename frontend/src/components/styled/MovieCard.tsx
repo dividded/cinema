@@ -39,18 +39,22 @@ export const MovieCard = styled.div<MovieCardProps>`
       ? `linear-gradient(to right, ${baseColor}, ${baseColor} 97%, #1f1a0d)`
       : baseColor;
   }};
-  border-radius: 6px;
   padding: 1rem;
-  border: 1px solid ${props => {
-    const baseColor = props.isWeekend ? '#1f1a15' : props.isMorningOnly ? '#3d1a1a' : '#333';
-    return props.isOldMovie 
-      ? `${baseColor} ${props.isWeekend ? '#1f1a15' : props.isMorningOnly ? '#3d1a1a' : '#3d2e0d'}`
-      : baseColor;
-  }};
+  border-top: 1px solid #333;
+  border-bottom: 1px solid #333;
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+
+  &:first-child {
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+  }
+
+  &:last-child {
+    border-bottom-left-radius: 6px;
+    border-bottom-right-radius: 6px;
+  }
 `
 
 export const MovieTitleText = styled.h2<{ isOldMovie: boolean }>`
