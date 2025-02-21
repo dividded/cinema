@@ -9,7 +9,6 @@ import {
   DateSection
 } from './components/styled/Layout'
 import {
-  RefreshButton,
   SearchContainer,
   SearchInput
 } from './components/styled/Controls'
@@ -50,26 +49,6 @@ function App() {
     }
   }
 
-  const handleRefresh = async () => {
-    setRefreshing(true)
-    try {
-      const response = await fetch('http://localhost:8080/api/movies/cinematheque/invalidate', {
-        method: 'POST'
-      })
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-      const data = await response.json()
-      setMovies(data)
-      setError(null)
-    } catch (err) {
-      setError('Failed to refresh movies')
-      console.error('Error refreshing movies:', err)
-    } finally {
-      setRefreshing(false)
-    }
-  }
-
   useEffect(() => {
     fetchMovies()
   }, [])
@@ -90,9 +69,6 @@ function App() {
     <Container>
       <Header>
         <Title>Cinema Schedule</Title>
-        <RefreshButton onClick={handleRefresh} disabled={refreshing}>
-          {refreshing ? 'Refreshing...' : 'Refresh Movies'}
-        </RefreshButton>
         <SearchContainer>
           <SearchInput 
             type="text"

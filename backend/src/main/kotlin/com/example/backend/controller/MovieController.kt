@@ -69,10 +69,4 @@ class MovieController(
             ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build()
         }
     }
-
-    @PostMapping("/cinematheque/invalidate")
-    fun invalidateAndRefetch(): ResponseEntity<List<Movie>> {
-        movieCacheService.invalidateCache()
-        return getCinemathequeMovies()
-    }
 } 

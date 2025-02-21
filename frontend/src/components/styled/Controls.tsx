@@ -1,28 +1,5 @@
 import styled from '@emotion/styled'
 
-export const RefreshButton = styled.button`
-  background: #646cff;
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 1rem;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  transition: background-color 0.2s;
-
-  &:hover {
-    background: #7c83ff;
-  }
-
-  &:disabled {
-    background: #4a4a4a;
-    cursor: not-allowed;
-  }
-`
-
 export const SearchContainer = styled.div`
   margin: 0 auto;
   max-width: 600px;
