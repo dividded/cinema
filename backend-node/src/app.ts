@@ -1,3 +1,5 @@
+export const maxDuration = 60; // This function can run for a maximum of 60 seconds
+
 import express from 'express';
 import cors from 'cors';
 import { MovieController } from './controllers/MovieController';
