@@ -2,11 +2,9 @@
   "name": "cinema-project",
   "private": true,
   "scripts": {
-    "backend": "cd backend && ./gradlew bootRun",
-    "backend:node": "cd backend-node && yarn dev",
+    "backend": "cd backend-node && yarn dev",
     "frontend": "cd frontend && yarn dev --host",
-    "dev": "concurrently \"yarn backend\" \"yarn frontend\"",
-    "backend:test": "cd backend && ./gradlew test"
+    "dev": "concurrently \"yarn backend\" \"yarn frontend\""
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
