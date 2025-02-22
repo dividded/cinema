@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import { MovieController } from './controllers/MovieController';
 
-export const app = express();
+const app = express();
 
 // Middleware
 app.use(express.json());
@@ -21,4 +21,7 @@ if (require.main === module) {
   app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
   });
-} 
+}
+
+// Export the Express app for Vercel
+export default app; 
