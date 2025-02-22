@@ -1,17 +1,8 @@
 import styled from '@emotion/styled'
-import { Theme } from '@emotion/react'
 
 interface MovieCardProps {
   isWeekend?: boolean;
   isMorningOnly?: boolean;
-  isOldMovie?: boolean;
-}
-
-interface MovieTitleTextProps {
-  isOldMovie?: boolean;
-}
-
-interface MovieYearProps {
   isOldMovie?: boolean;
 }
 

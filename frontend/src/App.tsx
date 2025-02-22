@@ -19,7 +19,6 @@ import {
   ErrorMessage
 } from './components/styled/Feedback'
 import { 
-  MoviesByDate,
   groupMoviesByDate,
   isMorningOnlyMovie,
   getMovieDatesCount
@@ -32,7 +31,6 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [showOldMoviesOnly, setShowOldMoviesOnly] = useState(false)
-  const [refreshing, setRefreshing] = useState(false)
 
   const fetchMovies = async () => {
     try {
