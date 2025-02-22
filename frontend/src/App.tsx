@@ -24,6 +24,7 @@ import {
   getMovieDatesCount
 } from './utils/movies'
 import { formatHebrewDate } from './utils/dateTime'
+import { CacheService } from './services/cache'
 
 function App() {
   const [movies, setMovies] = useState<Movie[]>([])
@@ -36,11 +37,27 @@ function App() {
     try {
       // Get the current host's IP/hostname from the window location
       const baseUrl = window.location.hostname
-      const response = await fetch(`http://${baseUrl}:3000/api/movies/cinematheque`)
+      const cacheKey = `http://${baseUrl}:3000/api/movies/cinematheque`
+      
+      // Try to get data from cache first
+      const cachedData = await CacheService.get(cacheKey)
+      if (cachedData) {
+        setMovies(cachedData)
+        setLoading(false)
+        setError(null)
+        return
+      }
+
+      // If no cache or expired, fetch from API
+      const response = await fetch(cacheKey)
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
       const data = await response.json()
+      
+      // Store in cache
+      await CacheService.set(cacheKey, data)
+      
       setMovies(data)
       setLoading(false)
       setError(null)

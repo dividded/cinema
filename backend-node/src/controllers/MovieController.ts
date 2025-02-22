@@ -6,6 +6,13 @@ import { Movie } from '../models/Movie';
 export class MovieController {
   static async getCinemathequeMovies(req: Request, res: Response) {
     try {
+      // Set cache control headers
+      res.set({
+        'Cache-Control': 'public, max-age=3600', // Cache for 1 hour
+        'ETag': new Date().toISOString().split('T')[0], // ETag based on current date
+        'Vary': 'Accept-Encoding' // Vary header for proper caching with compression
+      });
+
       console.log('Starting to fetch movies for next 30 days...');
       const allMovies = new Set<Movie>();
       
