@@ -15,9 +15,14 @@ export class MovieParser {
     const movieMap = new Map<string, Movie>();
     
     // Find all movie blocks
-    document.querySelectorAll('div.title').forEach(titleDiv => {
+    const titleDivs = document.querySelectorAll('div.title');
+    console.log('Found title divs:', titleDivs.length);
+    
+    titleDivs.forEach((titleDiv, index) => {
       // Extract movie title
-      const title = titleDiv.querySelector('h3')?.textContent?.trim() || '';
+      const titleElement = titleDiv.querySelector('h3');
+      const title = titleElement?.textContent?.trim() || '';
+      console.log(`Movie ${index + 1} title:`, title);
       
       // Get or create movie
       let movie = movieMap.get(title);
@@ -27,8 +32,12 @@ export class MovieParser {
       }
       
       // Extract screening details
-      titleDiv.querySelectorAll('div.n_block_r').forEach(screeningBlock => {
+      const screeningBlocks = titleDiv.querySelectorAll('div.n_block_r');
+      console.log(`Found ${screeningBlocks.length} screening blocks for movie:`, title);
+      
+      screeningBlocks.forEach(screeningBlock => {
         const screeningText = screeningBlock.querySelector('p')?.textContent?.trim() || '';
+        console.log('Screening text:', screeningText);
         
         // Parse screening details (format: "25-01-2025 | שבת | 11:00")
         const screeningParts = screeningText.split('|').map(part => part.trim());
@@ -38,11 +47,14 @@ export class MovieParser {
             venue: 'סינמטק תל אביב'
           };
           movie.screenings.push(screening);
+          console.log('Added screening:', screening);
         }
       });
     });
     
-    return Array.from(movieMap.values());
+    const movies = Array.from(movieMap.values());
+    console.log('Total movies parsed:', movies.length);
+    return movies;
   }
 
   static parseFromDateHtml(document: Document): Movie[] {

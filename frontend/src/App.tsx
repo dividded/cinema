@@ -36,7 +36,7 @@ function App() {
     try {
       // Get the current host's IP/hostname from the window location
       const baseUrl = window.location.hostname
-      const response = await fetch(`http://${baseUrl}:8080/api/movies/cinematheque`)
+      const response = await fetch(`http://${baseUrl}:3000/api/movies/cinematheque`)
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
