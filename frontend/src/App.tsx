@@ -35,12 +35,10 @@ function App() {
 
   const fetchMovies = async () => {
     try {
-      // Get the current host's IP/hostname from the window location
-      const baseUrl = window.location.hostname
-      const cacheKey = `http://${baseUrl}:3000/api/movies/cinematheque`
+      const apiUrl = 'https://cinema-mu-ten.vercel.app/api/movies/cinematheque'
       
       // Try to get data from cache first
-      const cachedData = await CacheService.get(cacheKey)
+      const cachedData = await CacheService.get(apiUrl)
       if (cachedData) {
         setMovies(cachedData)
         setLoading(false)
@@ -49,14 +47,14 @@ function App() {
       }
 
       // If no cache or expired, fetch from API
-      const response = await fetch(cacheKey)
+      const response = await fetch(apiUrl)
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
       const data = await response.json()
       
       // Store in cache
-      await CacheService.set(cacheKey, data)
+      await CacheService.set(apiUrl, data)
       
       setMovies(data)
       setLoading(false)
