@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { JSDOM } from 'jsdom';
 import { MovieParser } from '../services/MovieParser';
 import { Movie } from '../models/Movie';
@@ -11,10 +11,18 @@ const ONE_HOUR_IN_SECONDS = 60 * 60;
 const CACHE_EXPIRATION_SECONDS = ONE_HOUR_IN_SECONDS * 24;
 
 export class MovieController {
-  static async getCinemathequeMovies(req: Request, res: Response) {
+  static async getCinemathequeMovies(req: Request, res: Response, next: NextFunction) {
+    const skipCache = req.query.skipCache === 'true'; // Check for skipCache query param
+
     try {
-      // 1. Try fetching from cache
-      const cachedMovies = await MovieController._getMoviesFromCache();
+      let cachedMovies: Movie[] | null = null;
+
+      // 1. Try fetching from cache (unless skipped)
+      if (!skipCache) {
+        cachedMovies = await MovieController._getMoviesFromCache();
+      } else {
+        console.log('Cache skipped via query parameter.');
+      }
 
       if (cachedMovies) {
         console.log('Cache hit! Returning cached movies.');
@@ -27,33 +35,34 @@ export class MovieController {
         return;
       }
 
-      // 2. Fetch fresh data if cache missed
-      console.log('Cache miss. Fetching fresh movies...');
+      // 2. Fetch fresh data if cache missed or skipped
+      console.log(skipCache ? 'Fetching fresh movies (cache skipped)...' : 'Cache miss. Fetching fresh movies...');
       const freshMovies = await MovieController._fetchAndParseMovies();
 
       // Set cache headers for the fresh response
       res.set({
-         // Shorter max-age for fresh data might be desired, or keep it the same
-        'Cache-Control': `public, max-age=${CACHE_EXPIRATION_SECONDS / 2}`,
+        // Shorter max-age for fresh data might be desired, or keep it the same
+        // If cache was skipped, maybe don't set cache headers or set shorter ones?
+        'Cache-Control': `public, max-age=${skipCache ? 0 : CACHE_EXPIRATION_SECONDS / 2}`,
         'ETag': new Date().toISOString().split('T')[0],
-        'Vary': 'Accept-Encoding'
+        'Vary': 'Accept-Encoding, X-Skip-Cache' // Vary based on the skipCache presence perhaps? Or just handle via Cache-Control max-age=0
       });
 
       // Send the response first
       res.json(freshMovies);
 
-      // 3. Store fresh data in cache asynchronously (fire and forget)
-      // We don't await this, so it doesn't delay the user response
-      MovieController._storeMoviesInCache(freshMovies).catch(err => {
-        // Log errors from async cache storing, but don't crash
-        console.error('Async Redis SET error:', err);
-      });
+      // 3. Store fresh data in cache asynchronously (only if cache wasn't explicitly skipped)
+      if (!skipCache) {
+        MovieController._storeMoviesInCache(freshMovies).catch(err => {
+          // Log errors from async cache storing, but don't crash
+          console.error('Async Redis SET error:', err);
+        });
+      }
 
     } catch (error: any) {
       console.error('Error in getCinemathequeMovies:', error);
-      if (!res.headersSent) {
-         res.status(500).json({ error: 'Failed to fetch movies' });
-      }
+      // Forward error to Express error handler
+      next(error); // Use next for error handling
     }
   }
 
@@ -148,5 +157,34 @@ export class MovieController {
     const moviesResult = Array.from(allMovies);
     console.log(`Total unique movies found: ${moviesResult.length}`);
     return moviesResult;
+  }
+
+  /**
+   * Deletes the movie cache from Redis.
+   */
+  static async deleteCache(req: Request, res: Response, next: NextFunction) {
+    try {
+      if (!redisClient.isReady) {
+        console.warn('Redis client not ready, cannot delete cache.');
+        // Use standard error handling pattern with next()
+        const err = new Error('Cache service unavailable');
+        (err as any).status = 503; // Add status code to error object
+        return next(err); // Forward the error
+      }
+
+      const result = await redisClient.del(CACHE_KEY);
+
+      if (result > 0) {
+        console.log(`Cache key '${CACHE_KEY}' deleted successfully.`);
+        res.status(200).json({ message: `Cache key '${CACHE_KEY}' deleted successfully.` });
+      } else {
+        console.log(`Cache key '${CACHE_KEY}' not found or already deleted.`);
+        res.status(404).json({ message: `Cache key '${CACHE_KEY}' not found.` });
+      }
+    } catch (error: any) {
+      console.error('Error deleting cache:', error);
+      // Forward error to Express error handler
+      next(error); // Use next for error handling
+    }
   }
 } 
