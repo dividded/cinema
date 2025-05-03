@@ -20,6 +20,7 @@ app.use((req, res, next) => {
 
 // Routes
 app.get('/api/movies/cinematheque', MovieController.getCinemathequeMovies);
+app.get('/api/movies/cinematheque/refresh', MovieController.forceRefreshCinemathequeMovies);
 app.get('/api/movies/delete-cache', MovieController.deleteCache);
 
 // Hello World endpoint

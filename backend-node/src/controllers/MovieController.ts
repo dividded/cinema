@@ -8,61 +8,80 @@ const NUMBER_OF_DAYS_TO_FETCH = 60;
 const CACHE_KEY = 'cinemathequeMovies';
 
 const ONE_HOUR_IN_SECONDS = 60 * 60;
-const CACHE_EXPIRATION_SECONDS = ONE_HOUR_IN_SECONDS * 24;
+const CLIENT_CACHE_MAX_AGE_SECONDS = 60 * 10; // 10 minutes
+const CACHE_EXPIRATION_SECONDS = ONE_HOUR_IN_SECONDS * 24; // Redis TTL
 
 export class MovieController {
   static async getCinemathequeMovies(req: Request, res: Response, next: NextFunction) {
-    const skipCache = req.query.skipCache === 'true'; // Check for skipCache query param
-
     try {
-      let cachedMovies: Movie[] | null = null;
-
-      // 1. Try fetching from cache (unless skipped)
-      if (!skipCache) {
-        cachedMovies = await MovieController._getMoviesFromCache();
-      } else {
-        console.log('Cache skipped via query parameter.');
-      }
+      // 1. Try fetching from cache
+      const cachedMovies = await MovieController._getMoviesFromCache();
 
       if (cachedMovies) {
         console.log('Cache hit! Returning cached movies.');
         res.set({
-          'Cache-Control': `public, max-age=${CACHE_EXPIRATION_SECONDS}`,
-          'ETag': new Date().toISOString().split('T')[0], // Consider a more robust ETag based on content hash if possible
+          'Cache-Control': `public, max-age=${CACHE_EXPIRATION_SECONDS}`, // Long cache for server-cached data
+          'ETag': new Date().toISOString().split('T')[0], // Consider a more robust ETag
           'Vary': 'Accept-Encoding'
         });
         res.json(cachedMovies);
         return;
       }
 
-      // 2. Fetch fresh data if cache missed or skipped
-      console.log(skipCache ? 'Fetching fresh movies (cache skipped)...' : 'Cache miss. Fetching fresh movies...');
+      // 2. Fetch fresh data if cache missed
+      console.log('Cache miss. Fetching fresh movies...');
       const freshMovies = await MovieController._fetchAndParseMovies();
 
-      // Set cache headers for the fresh response
+      // Set cache headers for the fresh response - short client cache
       res.set({
-        // Shorter max-age for fresh data might be desired, or keep it the same
-        // If cache was skipped, maybe don't set cache headers or set shorter ones?
-        'Cache-Control': `public, max-age=${skipCache ? 0 : CACHE_EXPIRATION_SECONDS / 2}`,
+        'Cache-Control': `public, max-age=${CLIENT_CACHE_MAX_AGE_SECONDS}`,
         'ETag': new Date().toISOString().split('T')[0],
-        'Vary': 'Accept-Encoding, X-Skip-Cache' // Vary based on the skipCache presence perhaps? Or just handle via Cache-Control max-age=0
+        'Vary': 'Accept-Encoding'
       });
 
       // Send the response first
       res.json(freshMovies);
 
-      // 3. Store fresh data in cache asynchronously (only if cache wasn't explicitly skipped)
-      if (!skipCache) {
-        MovieController._storeMoviesInCache(freshMovies).catch(err => {
-          // Log errors from async cache storing, but don't crash
-          console.error('Async Redis SET error:', err);
-        });
-      }
+      // 3. Store fresh data in cache asynchronously
+      MovieController._storeMoviesInCache(freshMovies).catch(err => {
+        console.error('Async Redis SET error:', err);
+      });
 
     } catch (error: any) {
       console.error('Error in getCinemathequeMovies:', error);
-      // Forward error to Express error handler
       next(error); // Use next for error handling
+    }
+  }
+
+  /**
+   * Forces a refresh of the movie data, bypassing the cache check,
+   * stores the new data in cache, and returns it with no client caching.
+   */
+  static async forceRefreshCinemathequeMovies(req: Request, res: Response, next: NextFunction) {
+    try {
+      console.log('Forcing refresh of cinematheque movies...');
+      const freshMovies = await MovieController._fetchAndParseMovies();
+
+      // Set headers for no client caching
+      res.set({
+        'Cache-Control': 'public, max-age=0, no-cache, must-revalidate',
+        'Expires': '0',
+        'Pragma': 'no-cache',
+        'ETag': new Date().toISOString(), // Use a unique ETag like timestamp
+        'Vary': 'Accept-Encoding'
+      });
+
+      // Send the response first
+      res.json(freshMovies);
+
+      // Store fresh data in cache asynchronously
+      MovieController._storeMoviesInCache(freshMovies).catch(err => {
+        console.error('Async Redis SET error during force refresh:', err);
+      });
+
+    } catch (error: any) {
+      console.error('Error in forceRefreshCinemathequeMovies:', error);
+      next(error);
     }
   }
 
