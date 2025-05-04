@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { JSDOM } from 'jsdom';
 import { MovieParser } from '../services/MovieParser';
 import { Movie } from '../models/Movie';
-import redisClient from '../config/redis'; // Import the Redis client
+import { redisClient } from '../config/redis'; // Import the Redis client
 
 const NUMBER_OF_DAYS_TO_FETCH = 60;
 const CACHE_KEY = 'cinemathequeMovies';
@@ -91,8 +91,9 @@ export class MovieController {
    */
   private static async _getMoviesFromCache(): Promise<Movie[] | null> {
     try {
-      if (!redisClient.isReady) {
-        console.warn('Redis client not ready, skipping cache check.');
+      // Check if client exists and is ready
+      if (!redisClient || !redisClient.isReady) {
+        console.warn('Redis client not available or not ready, skipping cache check.');
         return null;
       }
       const cachedData = await redisClient.get(CACHE_KEY);
@@ -111,8 +112,9 @@ export class MovieController {
    */
   private static async _storeMoviesInCache(movies: Movie[]): Promise<void> {
     try {
-      if (!redisClient.isReady) {
-        console.warn('Redis client not ready, skipping cache set.');
+      // Check if client exists and is ready
+      if (!redisClient || !redisClient.isReady) {
+        console.warn('Redis client not available or not ready, skipping cache set.');
         return;
       }
       await redisClient.set(CACHE_KEY, JSON.stringify(movies), {
@@ -183,8 +185,9 @@ export class MovieController {
    */
   static async deleteCache(req: Request, res: Response, next: NextFunction) {
     try {
-      if (!redisClient.isReady) {
-        console.warn('Redis client not ready, cannot delete cache.');
+      // Check if client exists and is ready
+      if (!redisClient || !redisClient.isReady) {
+        console.warn('Redis client not available or not ready, cannot delete cache.');
         // Use standard error handling pattern with next()
         const err = new Error('Cache service unavailable');
         (err as any).status = 503; // Add status code to error object
