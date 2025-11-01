@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { JSDOM } from 'jsdom';
 import { MovieParser } from '../services/MovieParser';
 import { Movie } from '../models/Movie';
-import { redisClient } from '../config/redis'; // Import the Redis client
+import { redisClient, ensureRedisConnected } from '../config/redis'; // Import the Redis client and connection helper
 
 const NUMBER_OF_DAYS_TO_FETCH = 60;
 const CACHE_KEY = 'cinemathequeMovies';
@@ -91,12 +91,13 @@ export class MovieController {
    */
   private static async _getMoviesFromCache(): Promise<Movie[] | null> {
     try {
-      // Check if client exists and is ready
-      if (!redisClient || !redisClient.isReady) {
+      // Ensure Redis is connected (important for serverless environments)
+      const isConnected = await ensureRedisConnected();
+      if (!isConnected) {
         console.warn('Redis client not available or not ready, skipping cache check.');
         return null;
       }
-      const cachedData = await redisClient.get(CACHE_KEY);
+      const cachedData = await redisClient!.get(CACHE_KEY);
       if (cachedData) {
         return JSON.parse(cachedData) as Movie[];
       }
@@ -112,12 +113,13 @@ export class MovieController {
    */
   private static async _storeMoviesInCache(movies: Movie[]): Promise<void> {
     try {
-      // Check if client exists and is ready
-      if (!redisClient || !redisClient.isReady) {
+      // Ensure Redis is connected (important for serverless environments)
+      const isConnected = await ensureRedisConnected();
+      if (!isConnected) {
         console.warn('Redis client not available or not ready, skipping cache set.');
         return;
       }
-      await redisClient.set(CACHE_KEY, JSON.stringify(movies), {
+      await redisClient!.set(CACHE_KEY, JSON.stringify(movies), {
         EX: CACHE_EXPIRATION_SECONDS
       });
       console.log('Movies stored in cache.');
@@ -185,8 +187,9 @@ export class MovieController {
    */
   static async deleteCache(req: Request, res: Response, next: NextFunction) {
     try {
-      // Check if client exists and is ready
-      if (!redisClient || !redisClient.isReady) {
+      // Ensure Redis is connected (important for serverless environments)
+      const isConnected = await ensureRedisConnected();
+      if (!isConnected) {
         console.warn('Redis client not available or not ready, cannot delete cache.');
         // Use standard error handling pattern with next()
         const err = new Error('Cache service unavailable');
@@ -194,7 +197,7 @@ export class MovieController {
         return next(err); // Forward the error
       }
 
-      const result = await redisClient.del(CACHE_KEY);
+      const result = await redisClient!.del(CACHE_KEY);
 
       if (result > 0) {
         console.log(`Cache key '${CACHE_KEY}' deleted successfully.`);

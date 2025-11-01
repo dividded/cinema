@@ -28,4 +28,32 @@ async function connectRedis() {
   }
 }
 
-export { redisClient, connectRedis }; 
+/**
+ * Ensures Redis is connected before use.
+ * This is crucial for serverless environments where connections aren't persisted.
+ * In serverless, each invocation may be a new instance, so we need to connect on-demand.
+ */
+async function ensureRedisConnected(): Promise<boolean> {
+  if (!redisClient) {
+    return false;
+  }
+  
+  // If already connected, return true
+  if (redisClient.isReady) {
+    return true;
+  }
+  
+  // Try to connect if not ready
+  try {
+    if (!redisClient.isOpen) {
+      await redisClient.connect();
+      console.log('Redis client connected on-demand.');
+    }
+    return redisClient.isReady;
+  } catch (err) {
+    console.error('Failed to connect to Redis on-demand:', err);
+    return false;
+  }
+}
+
+export { redisClient, connectRedis, ensureRedisConnected }; 
