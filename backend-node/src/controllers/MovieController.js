@@ -127,25 +127,44 @@ class MovieController {
                 date.setDate(date.getDate() + i);
                 return date.toISOString().split('T')[0];
             });
-            const moviePromises = dates.map((date) => __awaiter(this, void 0, void 0, function* () {
+            // Process dates sequentially with delays to avoid overwhelming the server
+            const moviesArrays = [];
+            const FETCH_TIMEOUT_MS = 30000; // 30 seconds
+            const DELAY_BETWEEN_FETCHES_MS = 1000; // 1 second delay between fetches to avoid connection timeouts
+            for (let i = 0; i < dates.length; i++) {
+                const date = dates[i];
+                // Add delay before each fetch (except the first one)
+                if (i > 0) {
+                    yield new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_FETCHES_MS));
+                }
                 try {
-                    // Consider adding a short delay or using a library like p-limit
-                    // if fetching too rapidly causes issues with the target server.
-                    // console.log(`Fetching movies for date: ${date}`);
-                    const response = yield fetch(`https://www.cinema.co.il/shown/?date=${date}`);
+                    console.log(`Fetching movies for date: ${date} (${i + 1}/${dates.length})`);
+                    // Create AbortController for timeout
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+                    const response = yield fetch(`https://www.cinema.co.il/shown/?date=${date}`, {
+                        signal: controller.signal
+                    });
+                    clearTimeout(timeoutId);
                     if (!response.ok) {
                         throw new Error(`Fetch failed with status ${response.status} for date ${date}`);
                     }
                     const html = yield response.text();
                     const dom = new jsdom_1.JSDOM(html);
-                    return MovieParser_1.MovieParser.parseFromDateHtml(dom.window.document);
+                    const movies = MovieParser_1.MovieParser.parseFromDateHtml(dom.window.document);
+                    moviesArrays.push(movies);
+                    console.log(`Successfully fetched ${movies.length} movies for date ${date}`);
                 }
                 catch (fetchError) {
-                    console.error(`Error fetching movies for date ${date}:`, fetchError);
-                    return []; // Return empty array for this date on error
+                    if (fetchError.name === 'AbortError') {
+                        console.error(`Timeout fetching movies for date ${date} (exceeded ${FETCH_TIMEOUT_MS}ms)`);
+                    }
+                    else {
+                        console.error(`Error fetching movies for date ${date}:`, fetchError);
+                    }
+                    moviesArrays.push([]); // Return empty array for this date on error
                 }
-            }));
-            const moviesArrays = yield Promise.all(moviePromises);
+            }
             // Combine results and handle duplicates/merging
             moviesArrays.flat().forEach(movie => {
                 const existingMovie = Array.from(allMovies).find(m => m.title === movie.title);

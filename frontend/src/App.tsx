@@ -36,8 +36,13 @@ function App() {
 
   const fetchMovies = async () => {
     try {
-      // Use environment variable for API URL, default to localhost for local development
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/movies/cinematheque'
+      // Use environment variable if set, otherwise:
+      // - In development: use localhost
+      // - In production: use the Vercel backend URL
+      const apiUrl = import.meta.env.VITE_API_URL || 
+        (import.meta.env.MODE === 'development' 
+          ? 'http://localhost:3000/api/movies/cinematheque'
+          : 'https://cinema-mu-ten.vercel.app/api/movies/cinematheque')
       
       // Always fetch from API - no caching
       const response = await fetch(apiUrl, {

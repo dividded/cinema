@@ -1,0 +1,11 @@
+{
+  "watch": ["src"],
+  "ext": "ts,json",
+  "ignore": ["src/**/*.spec.ts", "node_modules", "dist"],
+  "exec": "ts-node --transpile-only src/app.ts",
+  "signal": "SIGTERM",
+  "delay": 2000,
+  "verbose": true,
+  "restartable": "rs"
+}
+
