@@ -61,7 +61,7 @@ export const MovieCard: React.FC<MovieCardProps> = ({
           {movie.screenings.slice(0, 2).map((screening, index) => (
             <ScreeningItem key={`${movie.title}-${index}`}>
               <DateTime>{screening.dateTime.split(' ')[1]}</DateTime>
-              <Venue>{screening.venue}</Venue>
+              <Venue>{screening.venue === 'Cinematheque TLV' ? 'TLV' : screening.venue}</Venue>
               {screening.language && <Venue>· {screening.language}</Venue>}
               {screening.subtitles && <Venue>· {screening.subtitles}</Venue>}
             </ScreeningItem>

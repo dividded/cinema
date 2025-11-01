@@ -12,8 +12,8 @@ export const DateHeader = styled.h3<DateHeaderProps>`
     return '#a855f7';
   }};
   font-size: 1.4rem;
-  margin: 1rem 0;
-  padding-bottom: 0.5rem;
+  margin: 0.25rem 0;
+  padding-bottom: 0.35rem;
   border-bottom: 2px solid ${props => {
     if (props.isWeekend) return '#c084fc';
     if (props.isMorningOnly) return '#ff8a8a';

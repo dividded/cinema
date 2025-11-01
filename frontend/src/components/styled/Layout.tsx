@@ -80,14 +80,14 @@ export const Title = styled.h1`
 export const MovieList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 2rem;
-  padding: 1rem;
+  gap: 1.25rem;
+  padding: 0.5rem 1rem 1rem 1rem;
   max-width: 900px;
   margin: 0 auto;
 `
 
 export const DateSection = styled.div`
-  margin-bottom: 2rem;
+  margin-bottom: 1.25rem;
   
   &:last-child {
     margin-bottom: 0;

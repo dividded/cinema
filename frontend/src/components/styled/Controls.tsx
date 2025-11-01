@@ -1,8 +1,7 @@
 import styled from '@emotion/styled'
 
 export const SearchContainer = styled.div`
-  margin: 0 0 2rem 0;
-  max-width: 600px;
+  margin: 0;
   width: 100%;
   position: relative;
   display: flex;
@@ -46,29 +45,37 @@ export const SearchInput = styled.input`
 export const FilterLabel = styled.label`
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 0.9rem;
+  gap: 0.75rem;
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 1.1rem;
+  font-weight: 500;
   cursor: pointer;
-  padding: 0.4rem;
-  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
   transition: all 0.2s;
   white-space: nowrap;
   user-select: none;
+  margin-top: -0.75rem;
+  margin-bottom: 0;
+  background-color: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 
   &:hover {
     color: #a855f7;
+    background-color: rgba(168, 85, 247, 0.1);
+    border-color: rgba(168, 85, 247, 0.3);
   }
 
   input[type="checkbox"] {
-    width: 1rem;
-    height: 1rem;
-    border-radius: 3px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
+    width: 1.2rem;
+    height: 1.2rem;
+    border-radius: 4px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
     appearance: none;
     cursor: pointer;
     position: relative;
     transition: all 0.2s;
+    flex-shrink: 0;
 
     &:checked {
       background: #a855f7;
@@ -78,7 +85,8 @@ export const FilterLabel = styled.label`
         content: '✓';
         position: absolute;
         color: #000;
-        font-size: 0.7rem;
+        font-size: 0.85rem;
+        font-weight: bold;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);

@@ -111,15 +111,15 @@ function App() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
-          <FilterLabel>
-            <input
-              type="checkbox"
-              checked={showOldMoviesOnly}
-              onChange={(e) => setShowOldMoviesOnly(e.target.checked)}
-            />
-            Movies older than 2020
-          </FilterLabel>
         </SearchContainer>
+        <FilterLabel>
+          <input
+            type="checkbox"
+            checked={showOldMoviesOnly}
+            onChange={(e) => setShowOldMoviesOnly(e.target.checked)}
+          />
+          Movies older than 2020
+        </FilterLabel>
       </Header>
       <MovieList>
         {allDatesArray.map(date => {
