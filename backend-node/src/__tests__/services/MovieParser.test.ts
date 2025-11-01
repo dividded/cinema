@@ -80,4 +80,53 @@ describe('MovieParser', () => {
     expect(movie).toBeDefined();
     expect(movie?.altName).toBe('The Story of Souleymane');
   });
+
+  it('should parse at least 5 movies from another examples fixture', () => {
+    // Given
+    const htmlContent = fs.readFileSync(
+      path.join(__dirname, '../../__fixtures__/cinema_co_another_examples.html'),
+      'utf-8'
+    );
+    const dom = new JSDOM(htmlContent);
+    const document = dom.window.document;
+
+    // When
+    const movies = MovieParser.parseFromDateHtml(document);
+
+    // Then
+    expect(movies.length).toBeGreaterThanOrEqual(5);
+    
+    // Verify no duplicate movies
+    const uniqueTitles = new Set(movies.map(movie => movie.title));
+    expect(uniqueTitles.size).toBe(movies.length);
+    
+    // Log the parsed movies for debugging
+    console.log(`Parsed ${movies.length} movies:`, movies.map(m => m.title));
+  });
+
+  it('should parse specific movie with all metadata', () => {
+    // Given
+    const htmlContent = fs.readFileSync(
+      path.join(__dirname, '../../__fixtures__/cinema_co_another_examples.html'),
+      'utf-8'
+    );
+    const dom = new JSDOM(htmlContent);
+    const document = dom.window.document;
+
+    // When
+    const movies = MovieParser.parseFromDateHtml(document);
+
+    // Then - Find the specific movie
+    const movie = movies.find(m => m.title === 'סוף שבוע בגליל | תרגום לצרפתית');
+    
+    expect(movie).toBeDefined();
+    expect(movie?.title).toBe('סוף שבוע בגליל | תרגום לצרפתית');
+    
+    // Log all data we captured for this movie
+    console.log('Movie data:', JSON.stringify(movie, null, 2));
+    
+    // Check for screenings
+    expect(movie?.screenings).toBeDefined();
+    expect(movie?.screenings.length).toBeGreaterThan(0);
+  });
 }); 
