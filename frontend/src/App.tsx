@@ -26,7 +26,6 @@ import {
   getAllDatesInRange
 } from './utils/movies'
 import { formatHebrewDate } from './utils/dateTime'
-import { CacheService } from './services/cache'
 
 function App() {
   const [movies, setMovies] = useState<Movie[]>([])
@@ -37,26 +36,17 @@ function App() {
 
   const fetchMovies = async () => {
     try {
-      const apiUrl = 'https://cinema-mu-ten.vercel.app/api/movies/cinematheque'
+      // Use environment variable for API URL, default to localhost for local development
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/movies/cinematheque'
       
-      // Try to get data from cache first
-      const cachedData = await CacheService.get(apiUrl)
-      if (cachedData) {
-        setMovies(cachedData)
-        setLoading(false)
-        setError(null)
-        return
-      }
-
-      // If no cache or expired, fetch from API
-      const response = await fetch(apiUrl)
+      // Always fetch from API - no caching
+      const response = await fetch(apiUrl, {
+        cache: 'no-store'
+      })
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
       }
       const data = await response.json()
-      
-      // Store in cache
-      await CacheService.set(apiUrl, data)
       
       setMovies(data)
       setLoading(false)

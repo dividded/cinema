@@ -4,11 +4,10 @@ import { MovieParser } from '../services/MovieParser';
 import { Movie } from '../models/Movie';
 import { redisClient, ensureRedisConnected } from '../config/redis'; // Import the Redis client and connection helper
 
-const NUMBER_OF_DAYS_TO_FETCH = 60;
+const NUMBER_OF_DAYS_TO_FETCH = 30;
 const CACHE_KEY = 'cinemathequeMovies';
 
 const ONE_HOUR_IN_SECONDS = 60 * 60;
-const CLIENT_CACHE_MAX_AGE_SECONDS = 60 * 10; // 10 minutes
 const CACHE_EXPIRATION_SECONDS = ONE_HOUR_IN_SECONDS * 24; // Redis TTL
 
 export class MovieController {
@@ -19,11 +18,6 @@ export class MovieController {
 
       if (cachedMovies) {
         console.log('Cache hit! Returning cached movies.');
-        res.set({
-          'Cache-Control': `public, max-age=${CACHE_EXPIRATION_SECONDS}`, // Long cache for server-cached data
-          'ETag': new Date().toISOString().split('T')[0], // Consider a more robust ETag
-          'Vary': 'Accept-Encoding'
-        });
         res.json(cachedMovies);
         return;
       }
@@ -32,14 +26,7 @@ export class MovieController {
       console.log('Cache miss. Fetching fresh movies...');
       const freshMovies = await MovieController._fetchAndParseMovies();
 
-      // Set cache headers for the fresh response - short client cache
-      res.set({
-        'Cache-Control': `public, max-age=${CLIENT_CACHE_MAX_AGE_SECONDS}`,
-        'ETag': new Date().toISOString().split('T')[0],
-        'Vary': 'Accept-Encoding'
-      });
-
-      // Send the response first
+      // Send the response
       res.json(freshMovies);
 
       // 3. Store fresh data in cache asynchronously
@@ -62,16 +49,7 @@ export class MovieController {
       console.log('Forcing refresh of cinematheque movies...');
       const freshMovies = await MovieController._fetchAndParseMovies();
 
-      // Set headers for no client caching
-      res.set({
-        'Cache-Control': 'public, max-age=0, no-cache, must-revalidate',
-        'Expires': '0',
-        'Pragma': 'no-cache',
-        'ETag': new Date().toISOString(), // Use a unique ETag like timestamp
-        'Vary': 'Accept-Encoding'
-      });
-
-      // Send the response first
+      // Send the response
       res.json(freshMovies);
 
       // Store fresh data in cache asynchronously
