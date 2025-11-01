@@ -86,6 +86,7 @@ function App() {
   });
 
   const moviesByDate = groupMoviesByDate(filteredMovies);
+  const allMoviesByDate = groupMoviesByDate(movies);
   const allDatesArray = getAllDatesInRange();
   const movieDatesCount = getMovieDatesCount(movies);
 
@@ -123,18 +124,19 @@ function App() {
       </Header>
       <MovieList>
         {allDatesArray.map(date => {
-          const hasMovies = moviesByDate[date] && moviesByDate[date].movies.length > 0;
+          const hasFilteredMovies = moviesByDate[date] && moviesByDate[date].movies.length > 0;
+          const hasAnyMovies = allMoviesByDate[date] && allMoviesByDate[date].movies.length > 0;
           const isWeekend = isDateWeekend(date);
           
           return (
             <DateSection key={date}>
               <DateHeader 
                 isWeekend={isWeekend}
-                isMorningOnly={hasMovies && !isWeekend && moviesByDate[date]?.isMorningOnly}
+                isMorningOnly={hasFilteredMovies && !isWeekend && moviesByDate[date]?.isMorningOnly}
               >
                 {formatHebrewDate(date)}
               </DateHeader>
-              {hasMovies ? (
+              {hasFilteredMovies ? (
                 moviesByDate[date].movies.map((movie) => (
                   <MovieCard
                     key={`${movie.title}-${movie.screenings[0]?.dateTime || 'unknown'}`}
@@ -144,7 +146,7 @@ function App() {
                     movieDatesCount={movieDatesCount}
                   />
                 ))
-              ) : (
+              ) : hasAnyMovies ? null : (
                 <NoMoviesCard date={date} isWeekend={isWeekend} />
               )}
             </DateSection>
