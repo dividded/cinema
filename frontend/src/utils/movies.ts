@@ -91,4 +91,41 @@ export const getMovieDatesCount = (movies: Movie[]): { [title: string]: number }
     acc[title] = dates.size;
     return acc;
   }, {} as { [title: string]: number });
+};
+
+export const getAllDatesFromMovies = (movies: Movie[]): Set<string> => {
+  const dates = new Set<string>();
+  
+  movies.forEach(movie => {
+    movie.screenings.forEach(screening => {
+      const date = screening.dateTime.split(' ')[0];
+      dates.add(date);
+    });
+  });
+  
+  return dates;
+};
+
+/**
+ * Gets all dates in the range from today for the next 60 days (matching backend range).
+ * This ensures we show all dates even if they have no movies.
+ */
+export const getAllDatesInRange = (): string[] => {
+  // Always use today as start date, matching backend behavior
+  const startDate = new Date();
+  startDate.setHours(0, 0, 0, 0); // Reset to start of day
+  
+  const endDate = new Date(startDate);
+  endDate.setDate(endDate.getDate() + 60); // 60 days ahead (matching backend NUMBER_OF_DAYS_TO_FETCH)
+  
+  const allDates: string[] = [];
+  const currentDate = new Date(startDate);
+  
+  while (currentDate <= endDate) {
+    const dateStr = currentDate.toISOString().split('T')[0];
+    allDates.push(dateStr);
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+  
+  return allDates;
 }; 

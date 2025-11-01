@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Movie } from './types/movie'
 import { MovieCard } from './components/MovieCard'
+import { NoMoviesCard } from './components/NoMoviesCard'
 import {
   Container,
   Header,
@@ -21,7 +22,8 @@ import {
 import { 
   groupMoviesByDate,
   isMorningOnlyMovie,
-  getMovieDatesCount
+  getMovieDatesCount,
+  getAllDatesInRange
 } from './utils/movies'
 import { formatHebrewDate } from './utils/dateTime'
 import { CacheService } from './services/cache'
@@ -84,8 +86,16 @@ function App() {
   });
 
   const moviesByDate = groupMoviesByDate(filteredMovies);
-  const sortedDates = Object.keys(moviesByDate).sort((a, b) => a.localeCompare(b));
+  const allDatesArray = getAllDatesInRange();
   const movieDatesCount = getMovieDatesCount(movies);
+
+  // Helper function to determine if a date is weekend
+  const isDateWeekend = (date: string): boolean => {
+    const [year, month, day] = date.split('-').map(Number);
+    const fullDate = new Date(year, month - 1, day);
+    const dayOfWeek = fullDate.getDay();
+    return dayOfWeek === 5 || dayOfWeek === 6;
+  };
 
   if (loading) return <LoadingMessage />
   if (error) return <ErrorMessage>Failed to load movies. Please try again later.</ErrorMessage>
@@ -112,25 +122,34 @@ function App() {
         </SearchContainer>
       </Header>
       <MovieList>
-        {sortedDates.map(date => (
-          <DateSection key={date}>
-            <DateHeader 
-              isWeekend={moviesByDate[date].isWeekend}
-              isMorningOnly={!moviesByDate[date].isWeekend && moviesByDate[date].isMorningOnly}
-            >
-              {formatHebrewDate(date)}
-            </DateHeader>
-            {moviesByDate[date].movies.map((movie) => (
-              <MovieCard
-                key={`${movie.title}-${movie.screenings[0]?.dateTime || 'unknown'}`}
-                movie={movie}
-                isWeekend={moviesByDate[date].isWeekend}
-                isMorningOnly={!moviesByDate[date].isWeekend && isMorningOnlyMovie(movie)}
-                movieDatesCount={movieDatesCount}
-              />
-            ))}
-          </DateSection>
-        ))}
+        {allDatesArray.map(date => {
+          const hasMovies = moviesByDate[date] && moviesByDate[date].movies.length > 0;
+          const isWeekend = isDateWeekend(date);
+          
+          return (
+            <DateSection key={date}>
+              <DateHeader 
+                isWeekend={isWeekend}
+                isMorningOnly={hasMovies && !isWeekend && moviesByDate[date]?.isMorningOnly}
+              >
+                {formatHebrewDate(date)}
+              </DateHeader>
+              {hasMovies ? (
+                moviesByDate[date].movies.map((movie) => (
+                  <MovieCard
+                    key={`${movie.title}-${movie.screenings[0]?.dateTime || 'unknown'}`}
+                    movie={movie}
+                    isWeekend={isWeekend}
+                    isMorningOnly={!isWeekend && isMorningOnlyMovie(movie)}
+                    movieDatesCount={movieDatesCount}
+                  />
+                ))
+              ) : (
+                <NoMoviesCard date={date} isWeekend={isWeekend} />
+              )}
+            </DateSection>
+          );
+        })}
       </MovieList>
     </Container>
   )
