@@ -129,4 +129,35 @@ describe('MovieParser', () => {
     expect(movie?.screenings).toBeDefined();
     expect(movie?.screenings.length).toBeGreaterThan(0);
   });
+
+  it('should parse at least 5 movies from cinema another example fixture', () => {
+    // Given
+    const htmlContent = fs.readFileSync(
+      path.join(__dirname, '../../__fixtures__/cinema_another_example.html'),
+      'utf-8'
+    );
+    const dom = new JSDOM(htmlContent);
+    const document = dom.window.document;
+
+    // When
+    const movies = MovieParser.parseFromDateHtml(document);
+
+    // Then
+    expect(movies.length).toBeGreaterThanOrEqual(5);
+    
+    // Verify no duplicate movies
+    const uniqueTitles = new Set(movies.map(movie => movie.title));
+    expect(uniqueTitles.size).toBe(movies.length);
+    
+    // Verify each movie has required fields
+    movies.forEach(movie => {
+      expect(movie.title).toBeTruthy();
+      expect(movie.screenings).toBeDefined();
+      expect(movie.screenings.length).toBeGreaterThan(0);
+    });
+    
+    // Log the parsed movies for debugging
+    console.log(`Parsed ${movies.length} movies from cinema_another_example.html:`);
+    console.log(movies.map(m => m.title));
+  });
 }); 

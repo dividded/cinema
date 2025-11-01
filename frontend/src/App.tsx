@@ -145,6 +145,11 @@ function App() {
           const hasAnyMovies = allMoviesByDate[date] && allMoviesByDate[date].movies.length > 0;
           const isWeekend = isDateWeekend(date);
           
+          // Don't show date section if movies exist but are filtered out
+          if (!hasFilteredMovies && hasAnyMovies) {
+            return null;
+          }
+          
           return (
             <DateSection key={date}>
               <DateHeader 
@@ -163,7 +168,7 @@ function App() {
                     movieDatesCount={movieDatesCount}
                   />
                 ))
-              ) : hasAnyMovies ? null : (
+              ) : (
                 <NoMoviesCard date={date} isWeekend={isWeekend} />
               )}
             </DateSection>
