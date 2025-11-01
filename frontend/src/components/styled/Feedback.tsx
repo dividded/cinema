@@ -21,7 +21,7 @@ const LoadingSpinner = styled.div`
   width: 50px;
   height: 50px;
   border: 4px solid #f3f3f3;
-  border-top: 4px solid #646cff;
+  border-top: 4px solid #a855f7;
   border-radius: 50%;
   animation: ${spinnerAnimation} 0.8s linear infinite;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);

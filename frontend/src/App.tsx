@@ -93,7 +93,7 @@ function App() {
   return (
     <Container>
       <Header>
-        <Title>Cinema Schedule</Title>
+        <Title>Cinema</Title>
         <SearchContainer>
           <SearchInput 
             type="text"
@@ -107,7 +107,7 @@ function App() {
               checked={showOldMoviesOnly}
               onChange={(e) => setShowOldMoviesOnly(e.target.checked)}
             />
-            Old Movies
+            Movies older than 2020
           </FilterLabel>
         </SearchContainer>
       </Header>

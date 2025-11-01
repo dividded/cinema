@@ -1,7 +1,7 @@
 import styled from '@emotion/styled'
 
 export const SearchContainer = styled.div`
-  margin: 0 auto 2rem;
+  margin: 0 0 2rem 0;
   max-width: 600px;
   width: 100%;
   position: relative;
@@ -33,8 +33,8 @@ export const SearchInput = styled.input`
 
   &:focus {
     outline: none;
-    border-color: #646cff;
-    box-shadow: 0 0 0 4px rgba(100, 108, 255, 0.1);
+    border-color: #a855f7;
+    box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.1);
     background-color: rgba(255, 255, 255, 0.08);
   }
 
@@ -57,7 +57,7 @@ export const FilterLabel = styled.label`
   user-select: none;
 
   &:hover {
-    color: #646cff;
+    color: #a855f7;
   }
 
   input[type="checkbox"] {
@@ -71,8 +71,8 @@ export const FilterLabel = styled.label`
     transition: all 0.2s;
 
     &:checked {
-      background: #646cff;
-      border-color: #646cff;
+      background: #a855f7;
+      border-color: #a855f7;
 
       &::after {
         content: '✓';
@@ -86,7 +86,7 @@ export const FilterLabel = styled.label`
     }
 
     &:hover {
-      border-color: #646cff;
+      border-color: #a855f7;
     }
   }
 ` 

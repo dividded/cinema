@@ -2,11 +2,11 @@ import React from 'react';
 import { Movie } from '../types/movie';
 import {
   MovieCard as StyledMovieCard,
-  MovieImagePreview,
   MovieTitleContainer,
   MovieTitleText,
   OriginalTitle,
   MovieYear,
+  MovieMetadata,
   LinkButton
 } from './styled/MovieCard';
 import {
@@ -14,7 +14,8 @@ import {
   ScreeningItem,
   DateTime,
   Venue,
-  MultiDateIndicator
+  MultiDateIndicator,
+  ScreeningsSeparator
 } from './styled/Screening';
 import { FaExternalLinkAlt } from 'react-icons/fa';
 
@@ -39,42 +40,45 @@ export const MovieCard: React.FC<MovieCardProps> = ({
       isMorningOnly={isMorningOnly}
       isOldMovie={isOldMovie}
     >
-      {movie.imgUrl && (
-        <MovieImagePreview>
-          <img src={movie.imgUrl} alt={movie.title} />
-        </MovieImagePreview>
-      )}
       <MovieTitleContainer>
         <MovieTitleText isOldMovie={isOldMovie}>
           {movie.altName && movie.title !== movie.altName ? (
             <>
               {movie.altName}
-              <OriginalTitle>{movie.title}</OriginalTitle>
+              <OriginalTitle isOldMovie={isOldMovie}>{movie.title}</OriginalTitle>
             </>
           ) : (
             movie.title
           )}
         </MovieTitleText>
-        {movie.year && <MovieYear isOldMovie={isOldMovie}>{movie.year}</MovieYear>}
+        <ScreeningsSeparator />
+        <ScreeningsList>
+          {movieDatesCount[movie.title] > 1 && (
+            <MultiDateIndicator>
+              {movieDatesCount[movie.title]} dates
+            </MultiDateIndicator>
+          )}
+          {movie.screenings.slice(0, 2).map((screening, index) => (
+            <ScreeningItem key={`${movie.title}-${index}`}>
+              <DateTime>{screening.dateTime.split(' ')[1]}</DateTime>
+              <Venue>{screening.venue}</Venue>
+              {screening.language && <Venue>· {screening.language}</Venue>}
+              {screening.subtitles && <Venue>· {screening.subtitles}</Venue>}
+            </ScreeningItem>
+          ))}
+        </ScreeningsList>
       </MovieTitleContainer>
-      <ScreeningsList>
-        {movieDatesCount[movie.title] > 1 && (
-          <MultiDateIndicator>
-            Showing on {movieDatesCount[movie.title]} dates
-          </MultiDateIndicator>
+      <MovieMetadata>
+        {movie.year && <MovieYear isOldMovie={isOldMovie}>{movie.year}</MovieYear>}
+        {movie.durationMinutes && (
+          <MovieYear isOldMovie={false}>{movie.durationMinutes}min</MovieYear>
         )}
-        {movie.screenings.map((screening, index) => (
-          <ScreeningItem key={`${movie.title}-${index}`}>
-            <DateTime>{screening.dateTime.split(' ')[1]}</DateTime>
-            <Venue>{screening.venue}</Venue>
-          </ScreeningItem>
-        ))}
-      </ScreeningsList>
-      {movie.siteUrl && (
-        <LinkButton onClick={() => window.open(movie.siteUrl, '_blank')}>
-          <FaExternalLinkAlt />
-        </LinkButton>
-      )}
+        {movie.siteUrl && (
+          <LinkButton onClick={() => window.open(movie.siteUrl, '_blank')}>
+            <FaExternalLinkAlt />
+          </LinkButton>
+        )}
+      </MovieMetadata>
     </StyledMovieCard>
   );
 }; 
