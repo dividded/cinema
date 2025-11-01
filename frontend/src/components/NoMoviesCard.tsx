@@ -6,7 +6,7 @@ interface NoMoviesCardProps {
   isWeekend: boolean;
 }
 
-export const NoMoviesCard: React.FC<NoMoviesCardProps> = ({ date, isWeekend }) => {
+export const NoMoviesCard: React.FC<NoMoviesCardProps> = ({ date: _date, isWeekend }) => {
   return (
     <StyledNoMoviesCard isWeekend={isWeekend}>
       No movies found for this date
