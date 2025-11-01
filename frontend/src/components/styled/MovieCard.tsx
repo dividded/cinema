@@ -54,6 +54,26 @@ export const MovieCard = styled.div<MovieCardProps>`
   transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
   margin-bottom: 0.75rem;
 
+  .desktop-layout {
+    @media (max-width: 768px) {
+      display: none;
+    }
+  }
+
+  .mobile-layout {
+    display: none;
+    
+    @media (max-width: 768px) {
+      display: flex;
+    }
+  }
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 1rem;
+  }
+
   &:hover {
     transform: translateY(-2px);
     box-shadow: ${props => {
@@ -92,6 +112,12 @@ export const MovieTitleText = styled.h2<{ isOldMovie: boolean }>`
   flex: 1;
   font-weight: 600;
   min-width: 0;
+
+  @media (max-width: 768px) {
+    font-size: 1.25rem;
+    flex: 1;
+    min-width: 0;
+  }
 `
 
 export const OriginalTitle = styled.span<{ isOldMovie?: boolean }>`
@@ -121,6 +147,30 @@ export const MovieTitleContainer = styled.div`
   gap: 1rem;
   flex: 1;
   min-width: 0;
+
+  &.mobile-layout {
+    @media (max-width: 768px) {
+      width: 100%;
+      flex: none;
+      margin-top: 0.5rem;
+    }
+  }
+`
+
+export const MovieTitleRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 1rem;
+  flex: 1;
+  min-width: 0;
+
+  &.mobile-layout {
+    @media (max-width: 768px) {
+      width: 100%;
+      flex: none;
+    }
+  }
 `
 
 export const MovieMetadata = styled.div`
@@ -131,6 +181,14 @@ export const MovieMetadata = styled.div`
   flex-shrink: 0;
   width: 180px;
   min-width: 180px;
+
+  &.mobile-layout {
+    @media (max-width: 768px) {
+      width: auto;
+      min-width: 0;
+      justify-content: flex-end;
+    }
+  }
 `
 
 export const LinkButton = styled.button`

@@ -8,6 +8,11 @@ export const ScreeningsList = styled.div`
   justify-content: flex-start;
   align-items: center;
   min-width: 0;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    flex: none;
+  }
 `
 
 export const ScreeningsSeparator = styled.div`
@@ -16,6 +21,10 @@ export const ScreeningsSeparator = styled.div`
   background: rgba(0, 0, 0, 0.3);
   margin: 0 0.5rem;
   flex-shrink: 0;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 `
 
 export const ScreeningItem = styled.div`
