@@ -90,6 +90,23 @@ function App() {
   const allDatesArray = getAllDatesInRange();
   const movieDatesCount = getMovieDatesCount(movies);
 
+  // Get today's date in Israeli timezone (Asia/Jerusalem)
+  const getTodayInIsrael = (): string => {
+    const now = new Date();
+    // Format date in Israeli timezone
+    const formatter = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'Asia/Jerusalem',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+    return formatter.format(now); // Returns YYYY-MM-DD format
+  };
+
+  // Filter out dates that are older than today in Israeli time
+  const todayInIsrael = getTodayInIsrael();
+  const visibleDatesArray = allDatesArray.filter(date => date >= todayInIsrael);
+
   // Helper function to determine if a date is weekend
   const isDateWeekend = (date: string): boolean => {
     const [year, month, day] = date.split('-').map(Number);
@@ -123,7 +140,7 @@ function App() {
         </FilterLabel>
       </Header>
       <MovieList>
-        {allDatesArray.map(date => {
+        {visibleDatesArray.map(date => {
           const hasFilteredMovies = moviesByDate[date] && moviesByDate[date].movies.length > 0;
           const hasAnyMovies = allMoviesByDate[date] && allMoviesByDate[date].movies.length > 0;
           const isWeekend = isDateWeekend(date);
