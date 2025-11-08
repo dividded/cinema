@@ -19,6 +19,12 @@ build/
 out/
 target/
 
+# Compiled TypeScript files (keep .ts, ignore .js compiled from .ts)
+backend-node/src/**/*.js
+backend-node/src/**/*.js.map
+backend-node/src/**/*.d.ts
+!backend-node/src/**/*.test.js
+
 # Gradle
 .gradle/
 gradle-app.setting

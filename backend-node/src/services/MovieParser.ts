@@ -1,4 +1,7 @@
 import { Movie, Screening } from '../models/Movie';
+import { createLogger } from '../utils/Logger';
+
+const logger = createLogger('MovieParser');
 
 // Helper function to mimic Kotlin's takeWhile
 function takeWhile(arr: string[], predicate: (char: string) => boolean): string[] {
@@ -16,13 +19,13 @@ export class MovieParser {
     
     // Find all movie blocks
     const titleDivs = document.querySelectorAll('div.title');
-    console.log('Found title divs:', titleDivs.length);
+    logger.debug('Found title divs:', titleDivs.length);
     
     titleDivs.forEach((titleDiv, index) => {
       // Extract movie title
       const titleElement = titleDiv.querySelector('h3');
       const title = titleElement?.textContent?.trim() || '';
-      console.log(`Movie ${index + 1} title:`, title);
+      logger.debug(`Movie ${index + 1} title:`, title);
       
       // Get or create movie
       let movie = movieMap.get(title);
@@ -33,11 +36,11 @@ export class MovieParser {
       
       // Extract screening details
       const screeningBlocks = titleDiv.querySelectorAll('div.n_block_r');
-      console.log(`Found ${screeningBlocks.length} screening blocks for movie:`, title);
+      logger.debug(`Found ${screeningBlocks.length} screening blocks for movie:`, title);
       
       screeningBlocks.forEach(screeningBlock => {
         const screeningText = screeningBlock.querySelector('p')?.textContent?.trim() || '';
-        console.log('Screening text:', screeningText);
+        logger.debug('Screening text:', screeningText);
         
         // Parse screening details (format: "25-01-2025 | שבת | 11:00")
         const screeningParts = screeningText.split('|').map(part => part.trim());
@@ -47,13 +50,13 @@ export class MovieParser {
             venue: 'סינמטק תל אביב'
           };
           movie.screenings.push(screening);
-          console.log('Added screening:', screening);
+          logger.debug('Added screening:', screening);
         }
       });
     });
     
     const movies = Array.from(movieMap.values());
-    console.log('Total movies parsed:', movies.length);
+    logger.debug('Total movies parsed:', movies.length);
     return movies;
   }
 

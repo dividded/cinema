@@ -1,14 +1,36 @@
 import { Request, Response, NextFunction } from 'express';
-import { JSDOM } from 'jsdom';
-import { MovieParser } from '../services/MovieParser';
 import { Movie } from '../models/Movie';
-import { redisClient, ensureRedisConnected } from '../config/redis'; // Import the Redis client and connection helper
+import { redisClient, ensureRedisConnected } from '../config/redis';
+import { BatchedFetcher } from '../services/BatchedFetcher';
+import { createLogger } from '../utils/Logger';
 
-const NUMBER_OF_DAYS_TO_FETCH = 30;
+const logger = createLogger('MovieController');
+
+// Configuration - all values can be overridden via environment variables
+const NUMBER_OF_DAYS_TO_FETCH = parseInt(process.env.MOVIE_FETCH_DAYS || '30', 10);
+const BATCH_SIZE = parseInt(process.env.BATCH_SIZE || '5', 10);
+const MIN_BATCH_DELAY_MS = parseInt(process.env.BATCH_MIN_DELAY_MS || '500', 10);
+const MAX_BATCH_DELAY_MS = parseInt(process.env.BATCH_MAX_DELAY_MS || '2000', 10);
+const FETCH_TIMEOUT_MS = parseInt(process.env.FETCH_TIMEOUT_MS || '30000', 10);
+
+const fetcher = new BatchedFetcher({
+  batchSize: BATCH_SIZE,
+  minBatchDelayMs: MIN_BATCH_DELAY_MS,
+  maxBatchDelayMs: MAX_BATCH_DELAY_MS,
+  fetchTimeoutMs: FETCH_TIMEOUT_MS
+});
+
+logger.info('Movie Fetcher Configuration:', {
+  daysToFetch: NUMBER_OF_DAYS_TO_FETCH,
+  batchSize: BATCH_SIZE,
+  minBatchDelayMs: MIN_BATCH_DELAY_MS,
+  maxBatchDelayMs: MAX_BATCH_DELAY_MS,
+  fetchTimeoutMs: FETCH_TIMEOUT_MS
+});
+
 const CACHE_KEY = 'cinemathequeMovies';
-
 const ONE_HOUR_IN_SECONDS = 60 * 60;
-const CACHE_EXPIRATION_SECONDS = ONE_HOUR_IN_SECONDS * 24; // Redis TTL
+const CACHE_EXPIRATION_SECONDS = ONE_HOUR_IN_SECONDS * 24;
 
 export class MovieController {
   static async getCinemathequeMovies(req: Request, res: Response, next: NextFunction) {
@@ -17,13 +39,13 @@ export class MovieController {
       const cachedMovies = await MovieController._getMoviesFromCache();
 
       if (cachedMovies) {
-        console.log('Cache hit! Returning cached movies.');
+        logger.info('Cache hit! Returning cached movies.');
         res.json(cachedMovies);
         return;
       }
 
       // 2. Fetch fresh data if cache missed
-      console.log('Cache miss. Fetching fresh movies...');
+      logger.info('Cache miss. Fetching fresh movies...');
       const freshMovies = await MovieController._fetchAndParseMovies();
 
       // Send the response
@@ -31,11 +53,11 @@ export class MovieController {
 
       // 3. Store fresh data in cache asynchronously
       MovieController._storeMoviesInCache(freshMovies).catch(err => {
-        console.error('Async Redis SET error:', err);
+        logger.error('Async Redis SET error:', err);
       });
 
     } catch (error: any) {
-      console.error('Error in getCinemathequeMovies:', error);
+      logger.errorWithStack('Error in getCinemathequeMovies:', error instanceof Error ? error : new Error(String(error)));
       next(error); // Use next for error handling
     }
   }
@@ -46,7 +68,7 @@ export class MovieController {
    */
   static async forceRefreshCinemathequeMovies(req: Request, res: Response, next: NextFunction) {
     try {
-      console.log('Forcing refresh of cinematheque movies...');
+      logger.info('Forcing refresh of cinematheque movies...');
       const freshMovies = await MovieController._fetchAndParseMovies();
 
       // Send the response
@@ -54,11 +76,11 @@ export class MovieController {
 
       // Store fresh data in cache asynchronously
       MovieController._storeMoviesInCache(freshMovies).catch(err => {
-        console.error('Async Redis SET error during force refresh:', err);
+        logger.error('Async Redis SET error during force refresh:', err);
       });
 
     } catch (error: any) {
-      console.error('Error in forceRefreshCinemathequeMovies:', error);
+      logger.errorWithStack('Error in forceRefreshCinemathequeMovies:', error instanceof Error ? error : new Error(String(error)));
       next(error);
     }
   }
@@ -72,7 +94,7 @@ export class MovieController {
       // Ensure Redis is connected (important for serverless environments)
       const isConnected = await ensureRedisConnected();
       if (!isConnected) {
-        console.warn('Redis client not available or not ready, skipping cache check.');
+        logger.warn('Redis client not available or not ready, skipping cache check.');
         return null;
       }
       const cachedData = await redisClient!.get(CACHE_KEY);
@@ -81,7 +103,7 @@ export class MovieController {
       }
       return null;
     } catch (cacheError) {
-      console.error('Redis GET error:', cacheError);
+      logger.error('Redis GET error:', cacheError);
       return null; // Don't fail request on cache error
     }
   }
@@ -94,94 +116,35 @@ export class MovieController {
       // Ensure Redis is connected (important for serverless environments)
       const isConnected = await ensureRedisConnected();
       if (!isConnected) {
-        console.warn('Redis client not available or not ready, skipping cache set.');
+        logger.warn('Redis client not available or not ready, skipping cache set.');
         return;
       }
       await redisClient!.set(CACHE_KEY, JSON.stringify(movies), {
         EX: CACHE_EXPIRATION_SECONDS
       });
-      console.log('Movies stored in cache.');
+      logger.info('Movies stored in cache.');
     } catch (cacheError) {
-      console.error('Redis SET error:', cacheError);
+      logger.error('Redis SET error:', cacheError);
       // Don't throw, just log the error
     }
   }
 
   /**
    * Fetches movie data for the configured number of days,
-   * parses HTML, and merges results.
+   * parses HTML, and merges results using the BatchedFetcher service.
    */
   private static async _fetchAndParseMovies(): Promise<Movie[]> {
-    console.log(`Starting to fetch movies for next ${NUMBER_OF_DAYS_TO_FETCH} days...`);
-    const allMovies = new Set<Movie>();
-
+    logger.info(`Fetching movies for next ${NUMBER_OF_DAYS_TO_FETCH} days...`);
+    
+    // Generate all dates to fetch
     const dates = Array.from({ length: NUMBER_OF_DAYS_TO_FETCH }, (_, i) => {
       const date = new Date();
       date.setDate(date.getDate() + i);
       return date.toISOString().split('T')[0];
     });
 
-    // Process dates sequentially with delays to avoid overwhelming the server
-    const moviesArrays: Movie[][] = [];
-    const FETCH_TIMEOUT_MS = 30000; // 30 seconds
-    const DELAY_BETWEEN_FETCHES_MS = 1000; // 1 second delay between fetches to avoid connection timeouts
-
-    for (let i = 0; i < dates.length; i++) {
-      const date = dates[i];
-      
-      // Add delay before each fetch (except the first one)
-      if (i > 0) {
-        await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_FETCHES_MS));
-      }
-
-      try {
-        console.log(`Fetching movies for date: ${date} (${i + 1}/${dates.length})`);
-        
-        // Create AbortController for timeout
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-
-        const response = await fetch(`https://www.cinema.co.il/shown/?date=${date}`, {
-          signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-          throw new Error(`Fetch failed with status ${response.status} for date ${date}`);
-        }
-        const html = await response.text();
-        const dom = new JSDOM(html);
-        const movies = MovieParser.parseFromDateHtml(dom.window.document);
-        moviesArrays.push(movies);
-        console.log(`Successfully fetched ${movies.length} movies for date ${date}`);
-      } catch (fetchError: any) {
-        if (fetchError.name === 'AbortError') {
-          console.error(`Timeout fetching movies for date ${date} (exceeded ${FETCH_TIMEOUT_MS}ms)`);
-        } else {
-          console.error(`Error fetching movies for date ${date}:`, fetchError);
-        }
-        moviesArrays.push([]); // Return empty array for this date on error
-      }
-    }
-
-    // Combine results and handle duplicates/merging
-    moviesArrays.flat().forEach(movie => {
-      const existingMovie = Array.from(allMovies).find(m => m.title === movie.title);
-      if (existingMovie) {
-        movie.screenings.forEach(screening => {
-          if (!existingMovie.screenings.some(s => s.dateTime === screening.dateTime && s.venue === screening.venue)) {
-            existingMovie.screenings.push(screening);
-          }
-        });
-      } else {
-        allMovies.add(movie);
-      }
-    });
-
-    const moviesResult = Array.from(allMovies);
-    console.log(`Total unique movies found: ${moviesResult.length}`);
-    return moviesResult;
+    // Use the batched fetcher service to fetch and merge movies
+    return await fetcher.fetchMoviesForDates(dates);
   }
 
   /**
@@ -192,7 +155,7 @@ export class MovieController {
       // Ensure Redis is connected (important for serverless environments)
       const isConnected = await ensureRedisConnected();
       if (!isConnected) {
-        console.warn('Redis client not available or not ready, cannot delete cache.');
+        logger.warn('Redis client not available or not ready, cannot delete cache.');
         // Use standard error handling pattern with next()
         const err = new Error('Cache service unavailable');
         (err as any).status = 503; // Add status code to error object
@@ -202,14 +165,14 @@ export class MovieController {
       const result = await redisClient!.del(CACHE_KEY);
 
       if (result > 0) {
-        console.log(`Cache key '${CACHE_KEY}' deleted successfully.`);
+        logger.info(`Cache key '${CACHE_KEY}' deleted successfully.`);
         res.status(200).json({ message: `Cache key '${CACHE_KEY}' deleted successfully.` });
       } else {
-        console.log(`Cache key '${CACHE_KEY}' not found or already deleted.`);
+        logger.info(`Cache key '${CACHE_KEY}' not found or already deleted.`);
         res.status(404).json({ message: `Cache key '${CACHE_KEY}' not found.` });
       }
     } catch (error: any) {
-      console.error('Error deleting cache:', error);
+      logger.errorWithStack('Error deleting cache:', error instanceof Error ? error : new Error(String(error)));
       // Forward error to Express error handler
       next(error); // Use next for error handling
     }

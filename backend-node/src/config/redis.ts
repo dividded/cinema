@@ -1,29 +1,32 @@
 import { createClient } from 'redis';
+import { createLogger } from '../utils/Logger';
+
+const logger = createLogger('redis');
 
 // Use environment variables for Redis connection details
 const redisUrl = process.env.REDIS_URL;
 
 if (!redisUrl) {
-  console.warn('REDIS_URL environment variable is not set. Redis features will be unavailable.');
+  logger.warn('REDIS_URL environment variable is not set. Redis features will be unavailable.');
 }
 
 const redisClient = redisUrl ? createClient({ url: redisUrl }) : null;
 
 if (redisClient) {
-  redisClient.on('error', (err) => console.error('Redis Client Error:', err));
+  redisClient.on('error', (err) => logger.error('Redis Client Error:', err));
 }
 
 // Function to initiate connection
 async function connectRedis() {
   if (!redisClient) {
-      console.log('Redis client not configured. Skipping connection.');
+      logger.info('Redis client not configured. Skipping connection.');
       return;
   }
   try {
     await redisClient.connect();
-    console.log('Redis client connected successfully.');
+    logger.info('Redis client connected successfully.');
   } catch (err) {
-    console.error('Failed to connect to Redis on startup:', err);
+    logger.errorWithStack('Failed to connect to Redis on startup:', err instanceof Error ? err : new Error(String(err)));
     // Don't exit, just log the error. The app can proceed without Redis.
   }
 }
@@ -47,11 +50,11 @@ async function ensureRedisConnected(): Promise<boolean> {
   try {
     if (!redisClient.isOpen) {
       await redisClient.connect();
-      console.log('Redis client connected on-demand.');
+      logger.info('Redis client connected on-demand.');
     }
     return redisClient.isReady;
   } catch (err) {
-    console.error('Failed to connect to Redis on-demand:', err);
+    logger.errorWithStack('Failed to connect to Redis on-demand:', err instanceof Error ? err : new Error(String(err)));
     return false;
   }
 }

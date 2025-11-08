@@ -1,0 +1,27 @@
+# Compiled JavaScript files (from TypeScript)
+backend-node/src/**/*.js
+backend-node/src/**/*.js.map
+backend-node/src/**/*.d.ts
+
+# Build outputs
+backend-node/dist/
+backend-node/build/
+backend-node/out/
+
+# Node modules
+node_modules/
+**/node_modules/
+
+# Test outputs
+backend-node/coverage/
+backend-node/.nyc_output/
+
+# Logs
+*.log
+logs/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
