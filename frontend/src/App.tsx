@@ -1,15 +1,18 @@
 import { useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { Movie } from './types/movie';
+import { BackgroundLayer } from './components/BackgroundLayer';
+import { BrandTitle } from './components/BrandTitle';
 import { MovieSchedule } from './components/MovieSchedule';
 import {
   Container,
   Header,
-  Title,
+  HeaderControls,
 } from './components/styled/Layout';
 import {
   SearchContainer,
   SearchInput,
-  FilterLabel
+  FilterRow,
+  FilterToggle,
 } from './components/styled/Controls';
 import {
   LoadingMessage,
@@ -19,6 +22,7 @@ import { computeFilterResult } from './filters/computeFilterResult';
 import { MOVIE_FILTERS } from './filters/registry';
 import { MovieFilterState } from './filters/types';
 import { useMovieIndex } from './hooks/useMovieIndex';
+import { useRotatingBackground } from './hooks/useRotatingBackground';
 
 function App() {
   const [movies, setMovies] = useState<Movie[]>([]);
@@ -31,6 +35,7 @@ function App() {
 
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const movieIndex = useMovieIndex(movies);
+  const backgroundUrl = useRotatingBackground();
 
   const filterState = useMemo<MovieFilterState>(
     () => ({
@@ -91,26 +96,37 @@ function App() {
 
   return (
     <Container>
+      <BackgroundLayer imageUrl={backgroundUrl} />
       <Header>
-        <Title>Cinema</Title>
-        <SearchContainer>
-          <SearchInput
-            type="text"
-            placeholder="Search movies..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </SearchContainer>
-        {MOVIE_FILTERS.map((filter) => (
-          <FilterLabel key={filter.id}>
-            <input
-              type="checkbox"
-              checked={enabledFilterIds.has(filter.id)}
-              onChange={() => toggleFilter(filter.id)}
+        <BrandTitle />
+        <HeaderControls>
+          <FilterRow>
+            {MOVIE_FILTERS.map((filter) => {
+              const active = enabledFilterIds.has(filter.id)
+              return (
+                <FilterToggle
+                  key={filter.id}
+                  type="button"
+                  $active={active}
+                  aria-pressed={active}
+                  onClick={() => toggleFilter(filter.id)}
+                >
+                  {filter.label}
+                </FilterToggle>
+              )
+            })}
+          </FilterRow>
+          <SearchContainer>
+            <SearchInput
+              type="search"
+              placeholder="Search"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              autoComplete="off"
+              spellCheck={false}
             />
-            {filter.label}
-          </FilterLabel>
-        ))}
+          </SearchContainer>
+        </HeaderControls>
       </Header>
       <MovieSchedule index={movieIndex} filterResult={filterResult} />
     </Container>

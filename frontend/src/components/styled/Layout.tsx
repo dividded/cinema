@@ -1,95 +1,108 @@
 import styled from '@emotion/styled'
 
 export const Container = styled.div`
+  position: relative;
   width: 100%;
   max-width: 100%;
   margin: 0 auto;
-  padding: 1rem;
   min-height: 100vh;
-  background: linear-gradient(160deg, #13151a 0%, #1a1d23 100%);
-  color: #fff;
-  font-size: 1.1rem;
+  color: var(--ink);
+  font-size: 1rem;
+  isolation: isolate;
 `
 
 export const Header = styled.header`
+  position: relative;
+  z-index: 1;
   display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-  margin-bottom: 3rem;
-  padding: 2rem 1rem;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+  margin: 0 auto 1.75rem;
+  /* Sit a bit lower in the existing hero fade — no extra veil/glow */
+  padding: 2.75rem 1.25rem 1.15rem;
+  max-width: 820px;
   text-align: left;
-  background: linear-gradient(180deg, rgba(19,21,26,0) 0%, rgba(19,21,26,1) 100%);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  max-width: 900px;
-  margin-left: auto;
-  margin-right: auto;
+  border-bottom: 1px solid var(--line);
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 2.1rem 1rem 1rem;
+    margin-bottom: 1.4rem;
+    gap: 0.65rem;
+  }
 `
 
 export const Title = styled.h1`
-  background: linear-gradient(135deg, #ffffff 0%, #f0f0f0 40%, #d0d0d0 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-  font-size: 4rem;
   margin: 0;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  position: relative;
-  display: inline-block;
-  line-height: 1.1;
-  text-shadow: 0 0 40px rgba(255, 255, 255, 0.1);
-  
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    pointer-events: none;
-  }
-  
-  &:hover::before {
-    opacity: 1;
-  }
-  
-  &::after {
-    content: '';
-    position: absolute;
-    bottom: -0.75rem;
-    left: 0;
-    width: 4rem;
-    height: 4px;
-    background: linear-gradient(90deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.4) 100%);
-    border-radius: 2px;
-  }
-  
+  flex: 0 1 auto;
+  min-width: 0;
+  font-family: 'Caveat', 'Segoe Print', cursive;
+  font-style: normal;
+  font-weight: 600;
+  font-size: clamp(2.6rem, 7.5vw, 3.8rem);
+  line-height: 0.95;
+  letter-spacing: 0.01em;
+  color: #c4a24a;
+  opacity: 1;
+  transform: rotate(-1.2deg);
+  transform-origin: left center;
+
   @media (max-width: 768px) {
-    font-size: 2.75rem;
-    
-    &::after {
-      width: 3rem;
-      height: 3px;
-    }
+    font-size: clamp(2.3rem, 10vw, 3rem);
+    align-self: flex-start;
+  }
+`
+
+export const TitleLetter = styled.span<{ $rotate: number; $y: number; $scale?: number }>`
+  display: inline-block;
+  transform:
+    rotate(${props => props.$rotate}deg)
+    translateY(${props => props.$y}px)
+    scale(${props => props.$scale ?? 1});
+  transform-origin: center bottom;
+`
+
+export const HeaderControls = styled.div`
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 0.85rem 1.25rem;
+  flex: 1 1 14rem;
+  min-width: 12rem;
+  max-width: 26rem;
+  margin: 0;
+
+  @media (max-width: 768px) {
+    max-width: none;
+    width: 100%;
+    justify-content: space-between;
   }
 `
 
 export const MovieList = styled.div`
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  padding: 0.5rem 1rem 1rem 1rem;
-  max-width: 900px;
+  gap: 2.25rem;
+  padding: 0 1.25rem 3.5rem;
+  max-width: 820px;
   margin: 0 auto;
+
+  @media (max-width: 768px) {
+    padding: 0 1rem 2.75rem;
+    gap: 1.85rem;
+  }
 `
 
 export const DateSection = styled.div`
-  margin-bottom: 1.25rem;
-  
-  &:last-child {
-    margin-bottom: 0;
-  }
-` 
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+`

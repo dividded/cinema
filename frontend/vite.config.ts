@@ -1,5 +1,10 @@
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
+import { backgroundsManifestPlugin } from './scripts/backgroundsPlugin'
+
+const rootDir = path.dirname(fileURLToPath(import.meta.url))
 
 const cinemaPathAlias = (): Plugin => ({
   name: 'cinema-path-alias',
@@ -16,6 +21,10 @@ const cinemaPathAlias = (): Plugin => ({
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
-  plugins: [react(), ...(mode === 'development' ? [cinemaPathAlias()] : [])],
+  plugins: [
+    react(),
+    backgroundsManifestPlugin(path.join(rootDir, 'public', 'backgrounds')),
+    ...(mode === 'development' ? [cinemaPathAlias()] : []),
+  ],
   base: mode === 'production' ? '/cinema/' : '/',
 }))

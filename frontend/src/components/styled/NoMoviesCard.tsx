@@ -6,20 +6,33 @@ interface NoMoviesCardProps {
 
 export const NoMoviesCard = styled.div<NoMoviesCardProps>`
   position: relative;
-  background: ${props => props.isWeekend ? '#2a1f3a' : '#1a1a1f'};
-  border-radius: 8px;
-  padding: 0.75rem 1.25rem;
-  border: 1px solid ${props => props.isWeekend ? '#4a2f5a' : '#2a2a2e'};
+  background: transparent;
+  border-radius: 0;
+  padding: 0.95rem 0.15rem 0.95rem 0.7rem;
+  border: none;
+  border-left: 2px solid ${props => (
+    props.isWeekend ? 'var(--weekend)' : 'transparent'
+  )};
   display: flex;
   align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  margin-bottom: 0.75rem;
-  opacity: 0.8;
+  justify-content: flex-start;
+  box-shadow: none;
+  margin: 0;
   font-style: italic;
-  color: #aaa;
-  font-size: 0.95rem;
-  text-align: center;
-  min-height: 2.5rem;
-`;
+  color: ${props => (props.isWeekend ? 'var(--weekend)' : 'var(--muted)')};
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.05rem;
+  text-align: left;
+  min-height: 2.25rem;
 
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0.7rem;
+    right: 18%;
+    bottom: 0;
+    height: 1px;
+    background: rgba(20, 20, 20, 0.12);
+    pointer-events: none;
+  }
+`

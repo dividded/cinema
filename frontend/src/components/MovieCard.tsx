@@ -7,8 +7,10 @@ import {
   MovieTitleText,
   OriginalTitle,
   MovieYear,
+  MovieDuration,
   MovieMetadata,
-  LinkButton
+  LinkButton,
+  MetaSpacer,
 } from './styled/MovieCard';
 import {
   ScreeningsList,
@@ -16,7 +18,6 @@ import {
   DateTime,
   Venue,
   MultiDateIndicator,
-  ScreeningsSeparator
 } from './styled/Screening';
 import { FaExternalLinkAlt } from 'react-icons/fa';
 
@@ -26,6 +27,65 @@ interface MovieCardProps {
   isWeekend: boolean;
   isMorningOnly: boolean;
   movieDatesCount: { [title: string]: number };
+}
+
+function MovieTitle({
+  movie,
+  isOldMovie,
+}: {
+  movie: Movie;
+  isOldMovie: boolean;
+}) {
+  return (
+    <MovieTitleText isOldMovie={isOldMovie}>
+      {movie.altName && movie.title !== movie.altName ? (
+        <>
+          {movie.altName}
+          <OriginalTitle isOldMovie={isOldMovie}>{movie.title}</OriginalTitle>
+        </>
+      ) : (
+        movie.title
+      )}
+    </MovieTitleText>
+  );
+}
+
+function Screenings({
+  movie,
+  datesCount,
+  idPrefix,
+}: {
+  movie: Movie;
+  datesCount: number;
+  idPrefix: string;
+}) {
+  return (
+    <ScreeningsList>
+      {datesCount > 1 && (
+        <MultiDateIndicator>{datesCount} dates</MultiDateIndicator>
+      )}
+      {movie.screenings.slice(0, 2).map((screening, index) => (
+        <ScreeningItem key={`${idPrefix}-${index}`}>
+          <DateTime>{screening.dateTime.split(' ')[1]}</DateTime>
+          <Venue>{screening.venue === 'Cinematheque TLV' ? 'TLV' : screening.venue}</Venue>
+          {screening.language && <Venue>· {screening.language}</Venue>}
+          {screening.subtitles && <Venue>· {screening.subtitles}</Venue>}
+        </ScreeningItem>
+      ))}
+    </ScreeningsList>
+  );
+}
+
+function YearCell({ year, isOldMovie }: { year?: number; isOldMovie: boolean }) {
+  if (year == null) {
+    return (
+      <MovieYear isOldMovie={false} isUnknown title="Year unknown">
+        —
+      </MovieYear>
+    );
+  }
+
+  return <MovieYear isOldMovie={isOldMovie}>{year}</MovieYear>;
 }
 
 export const MovieCard = memo(function MovieCard({
@@ -46,80 +106,45 @@ export const MovieCard = memo(function MovieCard({
       isOldMovie={isOldMovie}
     >
       <MovieTitleContainer className="desktop-layout">
-        <MovieTitleText isOldMovie={isOldMovie}>
-          {movie.altName && movie.title !== movie.altName ? (
-            <>
-              {movie.altName}
-              <OriginalTitle isOldMovie={isOldMovie}>{movie.title}</OriginalTitle>
-            </>
-          ) : (
-            movie.title
-          )}
-        </MovieTitleText>
-        <ScreeningsSeparator />
-        <ScreeningsList>
-          {datesCount > 1 && (
-            <MultiDateIndicator>{datesCount} dates</MultiDateIndicator>
-          )}
-          {movie.screenings.slice(0, 2).map((screening, index) => (
-            <ScreeningItem key={`${movie.title}-${index}`}>
-              <DateTime>{screening.dateTime.split(' ')[1]}</DateTime>
-              <Venue>{screening.venue === 'Cinematheque TLV' ? 'TLV' : screening.venue}</Venue>
-              {screening.language && <Venue>· {screening.language}</Venue>}
-              {screening.subtitles && <Venue>· {screening.subtitles}</Venue>}
-            </ScreeningItem>
-          ))}
-        </ScreeningsList>
+        <MovieTitle movie={movie} isOldMovie={isOldMovie} />
       </MovieTitleContainer>
+
       <MovieMetadata className="desktop-layout">
-        {movie.year && <MovieYear isOldMovie={isOldMovie}>{movie.year}</MovieYear>}
+        <Screenings movie={movie} datesCount={datesCount} idPrefix={movie.title} />
         {movie.durationMinutes && (
-          <MovieYear isOldMovie={false}>{movie.durationMinutes}min</MovieYear>
+          <MovieDuration>{movie.durationMinutes}min</MovieDuration>
+        )}
+        <YearCell year={movie.year} isOldMovie={isOldMovie} />
+        {movie.siteUrl ? (
+          <LinkButton onClick={() => window.open(movie.siteUrl, '_blank')}>
+            <FaExternalLinkAlt />
+          </LinkButton>
+        ) : (
+          <MetaSpacer aria-hidden="true" />
+        )}
+      </MovieMetadata>
+
+      <MovieTitleRow className="mobile-layout">
+        <MovieTitleContainer>
+          <MovieTitle movie={movie} isOldMovie={isOldMovie} />
+        </MovieTitleContainer>
+        <YearCell year={movie.year} isOldMovie={isOldMovie} />
+      </MovieTitleRow>
+
+      <MovieTitleContainer className="mobile-layout">
+        <Screenings
+          movie={movie}
+          datesCount={datesCount}
+          idPrefix={`${movie.title}-mobile`}
+        />
+        {movie.durationMinutes && (
+          <MovieDuration>{movie.durationMinutes}min</MovieDuration>
         )}
         {movie.siteUrl && (
           <LinkButton onClick={() => window.open(movie.siteUrl, '_blank')}>
             <FaExternalLinkAlt />
           </LinkButton>
         )}
-      </MovieMetadata>
-      <MovieTitleRow className="mobile-layout">
-        <MovieTitleText isOldMovie={isOldMovie}>
-          {movie.altName && movie.title !== movie.altName ? (
-            <>
-              {movie.altName}
-              <OriginalTitle isOldMovie={isOldMovie}>{movie.title}</OriginalTitle>
-            </>
-          ) : (
-            movie.title
-          )}
-        </MovieTitleText>
-        <MovieMetadata>
-          {movie.year && <MovieYear isOldMovie={isOldMovie}>{movie.year}</MovieYear>}
-          {movie.durationMinutes && (
-            <MovieYear isOldMovie={false}>{movie.durationMinutes}min</MovieYear>
-          )}
-          {movie.siteUrl && (
-            <LinkButton onClick={() => window.open(movie.siteUrl, '_blank')}>
-              <FaExternalLinkAlt />
-            </LinkButton>
-          )}
-        </MovieMetadata>
-      </MovieTitleRow>
-      <MovieTitleContainer className="mobile-layout">
-        <ScreeningsSeparator />
-        <ScreeningsList>
-          {datesCount > 1 && (
-            <MultiDateIndicator>{datesCount} dates</MultiDateIndicator>
-          )}
-          {movie.screenings.slice(0, 2).map((screening, index) => (
-            <ScreeningItem key={`${movie.title}-mobile-${index}`}>
-              <DateTime>{screening.dateTime.split(' ')[1]}</DateTime>
-              <Venue>{screening.venue === 'Cinematheque TLV' ? 'TLV' : screening.venue}</Venue>
-              {screening.language && <Venue>· {screening.language}</Venue>}
-              {screening.subtitles && <Venue>· {screening.subtitles}</Venue>}
-            </ScreeningItem>
-          ))}
-        </ScreeningsList>
       </MovieTitleContainer>
     </StyledMovieCard>
   );

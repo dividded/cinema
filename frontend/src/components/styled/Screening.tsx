@@ -2,63 +2,56 @@ import styled from '@emotion/styled'
 
 export const ScreeningsList = styled.div`
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  flex: 1;
-  justify-content: flex-start;
-  align-items: center;
-  min-width: 0;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 0.15rem;
+  flex: 0 0 auto;
+  direction: ltr;
+  unicode-bidi: isolate;
 
   @media (max-width: 768px) {
-    width: 100%;
-    flex: none;
+    align-items: flex-start;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0.3rem;
   }
 `
 
 export const ScreeningsSeparator = styled.div`
-  width: 1px;
-  height: 2rem;
-  background: rgba(0, 0, 0, 0.3);
-  margin: 0 0.5rem;
-  flex-shrink: 0;
-
-  @media (max-width: 768px) {
-    display: none;
-  }
+  display: none;
 `
 
 export const ScreeningItem = styled.div`
-  background-color: rgba(0, 0, 0, 0.25);
-  padding: 0.25rem 0.75rem;
-  border-radius: 4px;
-  display: flex;
-  gap: 0.5rem;
+  display: inline-flex;
+  gap: 0.28rem;
   align-items: center;
-  font-size: 1rem;
-  border: 1px solid rgba(0, 0, 0, 0.3);
+  font-size: 0.8rem;
   direction: ltr;
+  unicode-bidi: isolate;
   white-space: nowrap;
+  color: var(--ink-soft);
 `
 
 export const DateTime = styled.span`
-  color: #a855f7;
-  font-weight: 600;
+  color: var(--ink);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
 `
 
 export const Venue = styled.span`
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 0.9rem;
+  color: var(--muted);
+  font-size: 0.74rem;
 `
 
 export const MultiDateIndicator = styled.span`
-  background-color: rgba(0, 0, 0, 0.3);
-  color: #a855f7;
-  font-size: 0.9rem;
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-  border: 1px solid rgba(168, 85, 247, 0.4);
+  color: var(--muted);
+  font-size: 0.68rem;
   direction: ltr;
+  unicode-bidi: isolate;
   white-space: nowrap;
-  order: -1;
-  font-weight: 500;
-` 
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+`

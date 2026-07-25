@@ -1,100 +1,74 @@
 import styled from '@emotion/styled'
 
 export const SearchContainer = styled.div`
-  margin: 0;
-  width: 100%;
   position: relative;
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-
-  &::after {
-    content: '🔍';
-    position: absolute;
-    left: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
-    opacity: 0.5;
-    pointer-events: none;
-  }
+  flex: 1 1 auto;
+  min-width: 5.5rem;
+  max-width: 9.5rem;
 `
 
 export const SearchInput = styled.input`
-  flex: 1;
-  padding: 1rem 1rem 1rem 3rem;
-  border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background-color: rgba(255, 255, 255, 0.05);
-  color: #fff;
-  font-size: 1rem;
-  transition: all 0.2s;
-  backdrop-filter: blur(10px);
+  width: 100%;
+  padding: 0.2rem 0 0.25rem;
+  border: none;
+  border-bottom: 1px solid rgba(26, 25, 22, 0.22);
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 400;
+  letter-spacing: 0.02em;
+  transition: border-color 0.2s ease;
 
   &:focus {
     outline: none;
-    border-color: #a855f7;
-    box-shadow: 0 0 0 4px rgba(168, 85, 247, 0.1);
-    background-color: rgba(255, 255, 255, 0.08);
+    border-bottom-color: rgba(26, 25, 22, 0.45);
   }
 
   &::placeholder {
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--muted);
+    opacity: 0.85;
+    font-weight: 400;
+    letter-spacing: 0.03em;
   }
 `
 
-export const FilterLabel = styled.label`
-  display: inline-flex;
-  align-items: center;
-  gap: 0.75rem;
-  color: rgba(255, 255, 255, 0.95);
-  font-size: 1.1rem;
-  font-weight: 500;
+export const FilterRow = styled.div`
+  display: contents;
+`
+
+export const FilterToggle = styled.button<{ $active?: boolean }>`
+  appearance: none;
+  border: none;
+  background: transparent;
+  padding: 0.15rem 0 0.2rem;
+  margin: 0;
   cursor: pointer;
-  padding: 0.5rem 0.75rem;
-  border-radius: 8px;
-  transition: all 0.2s;
-  white-space: nowrap;
-  user-select: none;
-  margin-top: -0.75rem;
-  margin-bottom: 0;
-  background-color: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  flex: 0 0 auto;
+  font-family: inherit;
+  font-size: 0.92rem;
+  font-weight: ${props => (props.$active ? 700 : 600)};
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #c4a24a;
+  border-bottom: 1px solid ${props => (
+    props.$active ? '#c4a24a' : 'rgba(196, 162, 74, 0.35)'
+  )};
+  opacity: ${props => (props.$active ? 1 : 0.78)};
+  transition: color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
 
   &:hover {
-    color: #a855f7;
-    background-color: rgba(168, 85, 247, 0.1);
-    border-color: rgba(168, 85, 247, 0.3);
+    opacity: 1;
+    border-bottom-color: #c4a24a;
   }
 
-  input[type="checkbox"] {
-    width: 1.2rem;
-    height: 1.2rem;
-    border-radius: 4px;
-    border: 2px solid rgba(255, 255, 255, 0.4);
-    appearance: none;
-    cursor: pointer;
-    position: relative;
-    transition: all 0.2s;
-    flex-shrink: 0;
-
-    &:checked {
-      background: #a855f7;
-      border-color: #a855f7;
-
-      &::after {
-        content: '✓';
-        position: absolute;
-        color: #000;
-        font-size: 0.85rem;
-        font-weight: bold;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-      }
-    }
-
-    &:hover {
-      border-color: #a855f7;
-    }
+  &:active {
+    transform: translateY(1px);
   }
-` 
+
+  &:focus-visible {
+    outline: 1px solid var(--ink);
+    outline-offset: 3px;
+  }
+`

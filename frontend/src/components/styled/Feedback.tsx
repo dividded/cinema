@@ -14,17 +14,17 @@ const LoadingContainer = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 300px;
+  min-height: 100vh;
+  background: var(--bg);
 `
 
 const LoadingSpinner = styled.div`
-  width: 50px;
-  height: 50px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #a855f7;
+  width: 28px;
+  height: 28px;
+  border: 1.5px solid var(--line-strong);
+  border-top-color: var(--ink);
   border-radius: 50%;
-  animation: ${spinnerAnimation} 0.8s linear infinite;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  animation: ${spinnerAnimation} 0.7s linear infinite;
 `
 
 export const LoadingMessage = () => (
@@ -35,7 +35,14 @@ export const LoadingMessage = () => (
 
 export const ErrorMessage = styled.div`
   text-align: center;
-  padding: 2rem;
-  color: #ff6b6b;
-  font-size: 1.2rem;
-` 
+  padding: 4rem 1.5rem;
+  color: var(--morning);
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-style: italic;
+  font-size: 1.35rem;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+`

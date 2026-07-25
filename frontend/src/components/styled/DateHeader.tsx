@@ -7,22 +7,20 @@ interface DateHeaderProps {
 
 export const DateHeader = styled.h3<DateHeaderProps>`
   color: ${props => {
-    if (props.isWeekend) return '#c084fc';
-    if (props.isMorningOnly) return '#ff8a8a';
-    return '#a855f7';
+    if (props.isWeekend) return 'var(--weekend)';
+    if (props.isMorningOnly) return 'var(--morning)';
+    return 'var(--ink)';
   }};
-  font-size: 1.4rem;
-  margin: 0.25rem 0;
-  padding-bottom: 0.35rem;
-  border-bottom: 2px solid ${props => {
-    if (props.isWeekend) return '#c084fc';
-    if (props.isMorningOnly) return '#ff8a8a';
-    return '#a855f7';
-  }};
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 1.35rem;
   font-weight: 600;
-  text-shadow: ${props => {
-    if (props.isWeekend) return '0 0 10px rgba(192, 132, 252, 0.4)';
-    if (props.isMorningOnly) return '0 0 10px rgba(255, 138, 138, 0.4)';
-    return 'none';
+  font-style: normal;
+  letter-spacing: 0.01em;
+  margin: 0 0 0.35rem;
+  padding: 0 0 0.5rem;
+  border-bottom: 1px solid ${props => {
+    if (props.isWeekend) return 'var(--weekend-line)';
+    if (props.isMorningOnly) return 'var(--morning-line)';
+    return 'rgba(20, 20, 20, 0.14)';
   }};
-` 
+`
