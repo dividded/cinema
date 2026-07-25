@@ -1,0 +1,12 @@
+name = "cinema-api"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+# Create the namespace: npx wrangler kv namespace create MOVIES_KV
+# Then paste the returned id below.
+[[kv_namespaces]]
+binding = "MOVIES_KV"
+id = "7b38c01b510b4a198228b11ed83a5a64"
+
+[vars]
+MOVIES_KV_KEY = "cinemathequeMovies"

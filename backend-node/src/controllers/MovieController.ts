@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { Movie } from '../models/Movie';
 import { redisClient, ensureRedisConnected } from '../config/redis';
 import { BatchedFetcher } from '../services/BatchedFetcher';
+import { CloudflareKvClient } from '../services/CloudflareKvClient';
 import { createLogger } from '../utils/Logger';
 
 const logger = createLogger('MovieController');
@@ -51,9 +52,9 @@ export class MovieController {
       // Send the response
       res.json(freshMovies);
 
-      // 3. Store fresh data in cache asynchronously
-      MovieController._storeMoviesInCache(freshMovies).catch(err => {
-        logger.error('Async Redis SET error:', err);
+      // 3. Persist fresh data asynchronously
+      MovieController._persistMovies(freshMovies).catch(err => {
+        logger.error('Async persist error:', err);
       });
 
     } catch (error: any) {
@@ -74,9 +75,9 @@ export class MovieController {
       // Send the response
       res.json(freshMovies);
 
-      // Store fresh data in cache asynchronously
-      MovieController._storeMoviesInCache(freshMovies).catch(err => {
-        logger.error('Async Redis SET error during force refresh:', err);
+      // Persist fresh data asynchronously
+      MovieController._persistMovies(freshMovies).catch(err => {
+        logger.error('Async persist error during force refresh:', err);
       });
 
     } catch (error: any) {
@@ -106,6 +107,16 @@ export class MovieController {
       logger.error('Redis GET error:', cacheError);
       return null; // Don't fail request on cache error
     }
+  }
+
+  /**
+   * Stores movie data in Redis (when available) and Cloudflare KV.
+   */
+  private static async _persistMovies(movies: Movie[]): Promise<void> {
+    await Promise.allSettled([
+      MovieController._storeMoviesInCache(movies),
+      CloudflareKvClient.putMovies(movies),
+    ]);
   }
 
   /**

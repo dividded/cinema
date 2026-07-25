@@ -42,7 +42,7 @@ function App() {
       const apiUrl = import.meta.env.VITE_API_URL || 
         (import.meta.env.MODE === 'development' 
           ? 'http://localhost:3000/api/movies/cinematheque'
-          : 'https://cinema-mu-ten.vercel.app/api/movies/cinematheque')
+          : 'https://cinema-api.cinematheque.workers.dev/api/movies/cinematheque')
       
       // Always fetch from API - no caching
       const response = await fetch(apiUrl, {
