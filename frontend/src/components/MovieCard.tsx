@@ -3,7 +3,6 @@ import { Movie } from '../types/movie';
 import {
   MovieCard as StyledMovieCard,
   MovieTitleContainer,
-  MovieTitleRow,
   MovieTitleText,
   OriginalTitle,
   MovieYear,
@@ -105,11 +104,11 @@ export const MovieCard = memo(function MovieCard({
       isMorningOnly={isMorningOnly}
       isOldMovie={isOldMovie}
     >
-      <MovieTitleContainer className="desktop-layout">
+      <MovieTitleContainer>
         <MovieTitle movie={movie} isOldMovie={isOldMovie} />
       </MovieTitleContainer>
 
-      <MovieMetadata className="desktop-layout">
+      <MovieMetadata>
         <Screenings movie={movie} datesCount={datesCount} idPrefix={movie.title} />
         {movie.durationMinutes && (
           <MovieDuration>{movie.durationMinutes}min</MovieDuration>
@@ -123,29 +122,6 @@ export const MovieCard = memo(function MovieCard({
           <MetaSpacer aria-hidden="true" />
         )}
       </MovieMetadata>
-
-      <MovieTitleRow className="mobile-layout">
-        <MovieTitleContainer>
-          <MovieTitle movie={movie} isOldMovie={isOldMovie} />
-        </MovieTitleContainer>
-        <YearCell year={movie.year} isOldMovie={isOldMovie} />
-      </MovieTitleRow>
-
-      <MovieTitleContainer className="mobile-layout">
-        <Screenings
-          movie={movie}
-          datesCount={datesCount}
-          idPrefix={`${movie.title}-mobile`}
-        />
-        {movie.durationMinutes && (
-          <MovieDuration>{movie.durationMinutes}min</MovieDuration>
-        )}
-        {movie.siteUrl && (
-          <LinkButton onClick={() => window.open(movie.siteUrl, '_blank')}>
-            <FaExternalLinkAlt />
-          </LinkButton>
-        )}
-      </MovieTitleContainer>
     </StyledMovieCard>
   );
 });

@@ -5,6 +5,11 @@ export const SearchContainer = styled.div`
   flex: 1 1 auto;
   min-width: 5.5rem;
   max-width: 9.5rem;
+
+  @media (max-width: 768px) {
+    flex: 0 0 auto;
+    max-width: 9rem;
+  }
 `
 
 export const SearchInput = styled.input`
@@ -16,7 +21,7 @@ export const SearchInput = styled.input`
   background: transparent;
   color: var(--ink);
   font-family: inherit;
-  font-size: 0.8rem;
+  font-size: 0.92rem;
   font-weight: 400;
   letter-spacing: 0.02em;
   transition: border-color 0.2s ease;

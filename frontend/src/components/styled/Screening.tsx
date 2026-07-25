@@ -9,13 +9,6 @@ export const ScreeningsList = styled.div`
   flex: 0 0 auto;
   direction: ltr;
   unicode-bidi: isolate;
-
-  @media (max-width: 768px) {
-    align-items: flex-start;
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 0.3rem;
-  }
 `
 
 export const ScreeningsSeparator = styled.div`

@@ -79,9 +79,12 @@ export const HeaderControls = styled.div`
   margin: 0;
 
   @media (max-width: 768px) {
+    flex: 0 0 auto;
+    min-width: 0;
     max-width: none;
     width: 100%;
-    justify-content: space-between;
+    justify-content: flex-start;
+    gap: 1rem 1.25rem;
   }
 `
 

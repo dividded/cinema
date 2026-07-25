@@ -39,33 +39,17 @@ export const MovieCard = styled.div<MovieCardProps>`
     pointer-events: none;
   }
 
-  .desktop-layout {
-    @media (max-width: 768px) {
-      display: none !important;
-    }
-  }
-
-  .mobile-layout {
-    display: none !important;
-
-    @media (max-width: 768px) {
-      display: flex !important;
-    }
+  &:hover {
+    background: rgba(20, 20, 20, 0.015);
   }
 
   @media (max-width: 768px) {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 0.45rem;
+    gap: 0.65rem;
     padding: 0.8rem 0.05rem 0.8rem 0.6rem;
 
     &::after {
       right: 10%;
     }
-  }
-
-  &:hover {
-    background: rgba(20, 20, 20, 0.015);
   }
 
   &:last-child::after {
@@ -152,33 +136,6 @@ export const MovieTitleContainer = styled.div`
   min-width: 0;
   overflow: hidden;
   text-align: start;
-
-  &.mobile-layout {
-    @media (max-width: 768px) {
-      width: 100%;
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 0.4rem 0.6rem;
-      overflow: visible;
-      flex: none;
-    }
-  }
-`
-
-export const MovieTitleRow = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  min-width: 0;
-  width: 100%;
-
-  &.mobile-layout {
-    @media (max-width: 768px) {
-      width: 100%;
-    }
-  }
 `
 
 export const MovieMetadata = styled.div`
