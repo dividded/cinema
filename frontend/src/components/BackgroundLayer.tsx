@@ -5,7 +5,7 @@ const Hero = styled.div`
   top: 0;
   left: 0;
   right: 0;
-  height: min(58vh, 460px);
+  height: min(78vh, 730px);
   z-index: 0;
   overflow: hidden;
   pointer-events: none;

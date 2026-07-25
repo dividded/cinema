@@ -11,11 +11,11 @@ export const DateHeader = styled.h3<DateHeaderProps>`
     if (props.isMorningOnly) return 'var(--morning)';
     return 'var(--ink)';
   }};
-  font-family: 'Cormorant Garamond', Georgia, serif;
-  font-size: 1.35rem;
+  font-family: inherit;
+  font-size: 1.05rem;
   font-weight: 600;
   font-style: normal;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.02em;
   margin: 0 0 0.35rem;
   padding: 0 0 0.5rem;
   border-bottom: 1px solid ${props => {

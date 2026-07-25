@@ -14,7 +14,7 @@ function resolveUrls(files: string[]): string[] {
 }
 
 /** Picks once per page load from the current UTC-minute hash. No live swapping. */
-export function useRotatingBackground(): string | null {
+export function useRotatingBackground() {
   const [imageUrl, setImageUrl] = useState<string | null>(null)
 
   useEffect(() => {
@@ -37,5 +37,5 @@ export function useRotatingBackground(): string | null {
     }
   }, [])
 
-  return imageUrl
+  return { imageUrl }
 }

@@ -46,7 +46,7 @@ export const Title = styled.h1`
   font-size: clamp(2.6rem, 7.5vw, 3.8rem);
   line-height: 0.95;
   letter-spacing: 0.01em;
-  color: #c4a24a;
+  color: var(--ink);
   opacity: 1;
   transform: rotate(-1.2deg);
   transform-origin: left center;

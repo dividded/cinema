@@ -35,7 +35,7 @@ function App() {
 
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const movieIndex = useMovieIndex(movies);
-  const backgroundUrl = useRotatingBackground();
+  const { imageUrl: backgroundUrl } = useRotatingBackground();
 
   const filterState = useMemo<MovieFilterState>(
     () => ({
