@@ -1,0 +1,103 @@
+import { memo, useMemo, useRef } from 'react';
+import { FilterResult, movieCardKey } from '../filters/types';
+import { useApplyScheduleVisibility } from '../hooks/useApplyScheduleVisibility';
+import { isDateWeekend, MovieIndex } from '../hooks/useMovieIndex';
+import { formatHebrewDate } from '../utils/dateTime';
+import { isMorningOnlyMovie } from '../utils/movies';
+import { MovieCard } from './MovieCard';
+import { NoMoviesCard } from './NoMoviesCard';
+import { DateHeader } from './styled/DateHeader';
+import { DateSection, MovieList } from './styled/Layout';
+
+interface DateSectionBlockProps {
+  date: string;
+  meta: FilterResult['dateMeta'][string] | undefined;
+  movies: MovieIndex['moviesByDate'][string]['movies'] | undefined;
+  isWeekend: boolean;
+  movieDatesCount: MovieIndex['movieDatesCount'];
+}
+
+const dateSectionPropsAreEqual = (
+  prev: DateSectionBlockProps,
+  next: DateSectionBlockProps,
+): boolean =>
+  prev.date === next.date &&
+  prev.isWeekend === next.isWeekend &&
+  prev.movies === next.movies &&
+  prev.movieDatesCount === next.movieDatesCount &&
+  prev.meta?.hasAnyMovies === next.meta?.hasAnyMovies &&
+  prev.meta?.hasVisibleMovies === next.meta?.hasVisibleMovies &&
+  prev.meta?.isMorningOnly === next.meta?.isMorningOnly;
+
+const DateSectionBlock = memo(function DateSectionBlock({
+  date,
+  meta,
+  movies,
+  isWeekend,
+  movieDatesCount,
+}: DateSectionBlockProps) {
+  const hasAnyMovies = meta?.hasAnyMovies ?? Boolean(movies?.length);
+  const hasVisibleMovies = meta?.hasVisibleMovies ?? hasAnyMovies;
+  const isMorningOnly =
+    hasVisibleMovies && !isWeekend && (meta?.isMorningOnly ?? false);
+
+  return (
+    <DateSection data-date-section={date}>
+      <DateHeader isWeekend={isWeekend} isMorningOnly={isMorningOnly}>
+        {formatHebrewDate(date)}
+      </DateHeader>
+      {hasAnyMovies ? (
+        movies!.map((movie) => (
+          <MovieCard
+            key={movieCardKey(date, movie.title)}
+            movieKey={movieCardKey(date, movie.title)}
+            movie={movie}
+            isWeekend={isWeekend}
+            isMorningOnly={!isWeekend && isMorningOnlyMovie(movie)}
+            movieDatesCount={movieDatesCount}
+          />
+        ))
+      ) : (
+        <NoMoviesCard date={date} isWeekend={isWeekend} />
+      )}
+    </DateSection>
+  );
+}, dateSectionPropsAreEqual);
+
+interface MovieScheduleProps {
+  index: MovieIndex;
+  filterResult: FilterResult;
+}
+
+export const MovieSchedule = memo(function MovieSchedule({
+  index,
+  filterResult,
+}: MovieScheduleProps) {
+  const listRef = useRef<HTMLDivElement>(null);
+  const { moviesByDate, movieDatesCount, visibleDates } = index;
+
+  useApplyScheduleVisibility(listRef, filterResult);
+
+  const weekendByDate = useMemo(() => {
+    const weekends: Record<string, boolean> = {};
+    for (const date of visibleDates) {
+      weekends[date] = isDateWeekend(date);
+    }
+    return weekends;
+  }, [visibleDates]);
+
+  return (
+    <MovieList ref={listRef}>
+      {visibleDates.map((date) => (
+        <DateSectionBlock
+          key={date}
+          date={date}
+          meta={filterResult.dateMeta[date]}
+          movies={moviesByDate[date]?.movies}
+          isWeekend={weekendByDate[date]}
+          movieDatesCount={movieDatesCount}
+        />
+      ))}
+    </MovieList>
+  );
+});

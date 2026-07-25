@@ -24,6 +24,14 @@ body {
   min-height: 100vh;
 }
 
+.schedule-filter-hidden {
+  display: none !important;
+}
+
+[hidden].schedule-filter-hidden {
+  display: none !important;
+}
+
 a {
   font-weight: 500;
   color: #a855f7;

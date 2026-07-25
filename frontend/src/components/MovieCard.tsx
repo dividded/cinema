@@ -1,4 +1,4 @@
-import React from 'react';
+import { memo } from 'react';
 import { Movie } from '../types/movie';
 import {
   MovieCard as StyledMovieCard,
@@ -21,27 +21,30 @@ import {
 import { FaExternalLinkAlt } from 'react-icons/fa';
 
 interface MovieCardProps {
+  movieKey: string;
   movie: Movie;
   isWeekend: boolean;
   isMorningOnly: boolean;
   movieDatesCount: { [title: string]: number };
 }
 
-export const MovieCard: React.FC<MovieCardProps> = ({
+export const MovieCard = memo(function MovieCard({
+  movieKey,
   movie,
   isWeekend,
   isMorningOnly,
   movieDatesCount
-}) => {
+}: MovieCardProps) {
   const isOldMovie = movie.year ? movie.year < 2020 : false;
+  const datesCount = movieDatesCount[movie.title];
 
   return (
     <StyledMovieCard
+      data-movie-key={movieKey}
       isWeekend={isWeekend}
       isMorningOnly={isMorningOnly}
       isOldMovie={isOldMovie}
     >
-      {/* Desktop layout: title + separator + screenings */}
       <MovieTitleContainer className="desktop-layout">
         <MovieTitleText isOldMovie={isOldMovie}>
           {movie.altName && movie.title !== movie.altName ? (
@@ -55,10 +58,8 @@ export const MovieCard: React.FC<MovieCardProps> = ({
         </MovieTitleText>
         <ScreeningsSeparator />
         <ScreeningsList>
-          {movieDatesCount[movie.title] > 1 && (
-            <MultiDateIndicator>
-              {movieDatesCount[movie.title]} dates
-            </MultiDateIndicator>
+          {datesCount > 1 && (
+            <MultiDateIndicator>{datesCount} dates</MultiDateIndicator>
           )}
           {movie.screenings.slice(0, 2).map((screening, index) => (
             <ScreeningItem key={`${movie.title}-${index}`}>
@@ -81,7 +82,6 @@ export const MovieCard: React.FC<MovieCardProps> = ({
           </LinkButton>
         )}
       </MovieMetadata>
-      {/* Mobile layout: title + metadata row, then screenings */}
       <MovieTitleRow className="mobile-layout">
         <MovieTitleText isOldMovie={isOldMovie}>
           {movie.altName && movie.title !== movie.altName ? (
@@ -108,10 +108,8 @@ export const MovieCard: React.FC<MovieCardProps> = ({
       <MovieTitleContainer className="mobile-layout">
         <ScreeningsSeparator />
         <ScreeningsList>
-          {movieDatesCount[movie.title] > 1 && (
-            <MultiDateIndicator>
-              {movieDatesCount[movie.title]} dates
-            </MultiDateIndicator>
+          {datesCount > 1 && (
+            <MultiDateIndicator>{datesCount} dates</MultiDateIndicator>
           )}
           {movie.screenings.slice(0, 2).map((screening, index) => (
             <ScreeningItem key={`${movie.title}-mobile-${index}`}>
@@ -125,4 +123,4 @@ export const MovieCard: React.FC<MovieCardProps> = ({
       </MovieTitleContainer>
     </StyledMovieCard>
   );
-}; 
+});

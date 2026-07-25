@@ -27,6 +27,7 @@ export const getEarliestScreeningTime = (screenings: Movie['screenings']): strin
 
 export const groupMoviesByDate = (movies: Movie[]): MoviesByDate => {
   const grouped: MoviesByDate = {};
+  const movieIndexByDate = new Map<string, Map<string, Movie>>();
   
   movies.forEach(movie => {
     movie.screenings.forEach(screening => {
@@ -42,16 +43,20 @@ export const groupMoviesByDate = (movies: Movie[]): MoviesByDate => {
           isWeekend,
           isMorningOnly: true
         };
+        movieIndexByDate.set(date, new Map());
       }
       
-      const existingMovie = grouped[date].movies.find(m => m.title === movie.title);
+      const movieIndexByTitle = movieIndexByDate.get(date)!;
+      const existingMovie = movieIndexByTitle.get(movie.title);
       if (existingMovie) {
         existingMovie.screenings.push(screening);
       } else {
-        grouped[date].movies.push({
+        const entry = {
           ...movie,
           screenings: [screening]
-        });
+        };
+        movieIndexByTitle.set(movie.title, entry);
+        grouped[date].movies.push(entry);
       }
 
       const time = screening.dateTime.split(' ')[1];
