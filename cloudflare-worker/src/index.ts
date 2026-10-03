@@ -84,7 +84,10 @@ async function cachedJsonResponse(request: Request, json: string): Promise<Respo
     ETag: etag,
   };
 
-  if (request.headers.get('If-None-Match') === etag) {
+  // Cloudflare's edge weakens the ETag (W/"...") when it compresses the response, so
+  // browsers send the weak form back; compare ignoring the W/ prefix.
+  const ifNoneMatch = request.headers.get('If-None-Match') ?? '';
+  if (ifNoneMatch.split(',').some(tag => tag.trim().replace(/^W\//, '') === etag)) {
     return new Response(null, { status: 304, headers });
   }
   return new Response(json, { status: 200, headers });
