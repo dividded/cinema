@@ -20,7 +20,7 @@ export const NoMoviesCard = styled.div<NoMoviesCardProps>`
   margin: 0;
   font-style: italic;
   color: ${props => (props.isWeekend ? 'var(--weekend)' : 'var(--muted)')};
-  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-family: 'Cormorant Garamond Variable', 'Cormorant Garamond', Georgia, serif;
   font-size: 1.05rem;
   text-align: left;
   min-height: 2.25rem;

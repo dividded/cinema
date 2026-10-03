@@ -105,7 +105,7 @@ export const MovieYear = styled('span', {
   width: 2.85rem;
   margin-left: 0.35rem;
   text-align: right;
-  font-family: 'DM Sans', system-ui, sans-serif;
+  font-family: 'DM Sans Variable', 'DM Sans', system-ui, sans-serif;
   font-size: 0.92rem;
   line-height: 1.2;
   color: ${props => {

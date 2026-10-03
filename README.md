@@ -3,14 +3,35 @@ The project aggregates data from multiple sites and also merges film data from t
 
 ## Data refresh
 
-The frontend reads movies from the Cloudflare Worker (`cloudflare-worker/`), which serves them from KV.
-A cron trigger in `cloudflare-worker/wrangler.toml` calls the backend's refresh endpoint twice a day and
-stores the result; an empty or failed scrape never overwrites existing data.
+The frontend reads the schedule from the Cloudflare Worker (`cloudflare-worker/`), which serves it from KV.
+A cron trigger in `cloudflare-worker/wrangler.toml` asks the backend (`/api/movies/cinematheque/days`) to scrape
+the next `FETCH_DAYS` (45) days and merges the per-day results into what it already has:
 
-- `GET /api/health` shows when the data was last refreshed and the screening date range.
+- A day that failed to fetch (error, timeout, or the site's rate-limit page) keeps its previous data.
+- A scrape that found no movies at all is rejected, so a broken scrape never wipes the site.
+- Past days are dropped. The UI only lists days that were actually fetched.
+
+The backend is a stateless scraper; the worker is the only writer to KV.
+
+- `GET /api/schedule` returns `{ updatedAt, dates, movies }` (what the frontend uses).
+- `GET /api/health` shows when the data was last refreshed, and which days failed.
 - `POST /api/refresh` triggers a refresh on demand (rate-limited to once per 5 minutes).
 
 Deployment uses Cloudflare Workers Builds, so no Cloudflare keys live in GitHub. In the Cloudflare dashboard,
 open the `cinema-api` worker → **Settings → Builds → Connect** this repo, with root directory `cloudflare-worker`
 and deploy command `yarn deploy` (deploys, then refreshes and verifies the data). GitHub Actions
 (`.github/workflows/check-worker.yml`) type-checks and validates the worker on every push.
+
+## Frontend loading
+
+The page is built so everything needed for the first screen downloads in parallel with the JS bundle:
+
+- `index.html` preloads the schedule, the two critical fonts (self-hosted; the title font is subset to its
+  letters) and the background image, which an inline script picks before any JS runs.
+- Backgrounds ship as AVIF with a WebP fallback (add new ones with `yarn optimize-background <image>`).
+- The last schedule is kept in `localStorage` and rendered immediately, then revalidated with an ETag.
+- A service worker (`public/sw.js`) serves the app from cache on repeat visits and updates it in the background,
+  so a new deploy shows up on the visit after the first one following it.
+
+For local development run the worker (`cd cloudflare-worker && yarn dev`, port 8787) and the frontend
+(`cd frontend && yarn dev`); set `VITE_API_URL` to point the frontend at another API.

@@ -1,4 +1,5 @@
 import styled from '@emotion/styled'
+import { useState } from 'react'
 
 const Hero = styled.div`
   position: absolute;
@@ -19,6 +20,14 @@ const Image = styled.img`
   object-position: center top;
   opacity: 0.7;
   filter: saturate(0.92) contrast(0.98);
+
+  /* Only images that arrive after first paint fade in; cached ones show instantly. */
+  &[data-pending] {
+    opacity: 0;
+  }
+  &[data-fade] {
+    transition: opacity 0.25s ease-out;
+  }
 `
 
 const Wash = styled.div`
@@ -35,16 +44,32 @@ const Wash = styled.div`
 `
 
 interface BackgroundLayerProps {
-  imageUrl: string | null;
+  image: { avif: string; webp: string } | null;
 }
 
 /** Top-of-page hero only — scrolls away with the page (not fixed). */
-export function BackgroundLayer({ imageUrl }: BackgroundLayerProps) {
-  if (!imageUrl) return null
+export function BackgroundLayer({ image }: BackgroundLayerProps) {
+  const [state, setState] = useState<'unknown' | 'pending' | 'loaded'>('unknown')
+
+  if (!image) return null
 
   return (
     <Hero aria-hidden="true">
-      <Image src={imageUrl} alt="" decoding="async" fetchPriority="low" />
+      <picture>
+        <source srcSet={image.avif} type="image/avif" />
+        <Image
+          ref={(img) => {
+            if (img && state === 'unknown') setState(img.complete ? 'loaded' : 'pending')
+          }}
+          src={image.webp}
+          alt=""
+          decoding="async"
+          fetchPriority="high"
+          onLoad={() => setState('loaded')}
+          data-pending={state === 'pending' ? '' : undefined}
+          data-fade={state !== 'unknown' ? '' : undefined}
+        />
+      </picture>
       <Wash />
     </Hero>
   )
