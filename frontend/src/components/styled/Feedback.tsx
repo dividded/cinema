@@ -10,12 +10,12 @@ const spinnerAnimation = keyframes`
   }
 `
 
-const LoadingContainer = styled.div`
+const LoadingContainer = styled.div<{ $compact?: boolean }>`
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
-  background: var(--bg);
+  min-height: ${props => (props.$compact ? '40vh' : '100vh')};
+  background: ${props => (props.$compact ? 'transparent' : 'var(--bg)')};
 `
 
 const LoadingSpinner = styled.div`
@@ -27,8 +27,8 @@ const LoadingSpinner = styled.div`
   animation: ${spinnerAnimation} 0.7s linear infinite;
 `
 
-export const LoadingMessage = () => (
-  <LoadingContainer>
+export const LoadingMessage = ({ compact }: { compact?: boolean }) => (
+  <LoadingContainer $compact={compact}>
     <LoadingSpinner />
   </LoadingContainer>
 )
@@ -37,7 +37,7 @@ export const ErrorMessage = styled.div`
   text-align: center;
   padding: 4rem 1.5rem;
   color: var(--morning);
-  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-family: 'Cormorant Garamond Variable', 'Cormorant Garamond', Georgia, serif;
   font-style: italic;
   font-size: 1.35rem;
   min-height: 100vh;

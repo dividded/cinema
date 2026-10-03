@@ -40,7 +40,7 @@ export const Title = styled.h1`
   margin: 0;
   flex: 0 1 auto;
   min-width: 0;
-  font-family: 'Caveat', 'Segoe Print', cursive;
+  font-family: 'Caveat Title', 'Caveat', 'Segoe Print', cursive;
   font-style: normal;
   font-weight: 600;
   font-size: clamp(2.6rem, 7.5vw, 3.8rem);
@@ -108,4 +108,7 @@ export const DateSection = styled.div`
   margin: 0;
   display: flex;
   flex-direction: column;
+  /* Skip layout and paint for days that are off-screen; sizes are remembered once rendered. */
+  content-visibility: auto;
+  contain-intrinsic-size: auto 480px;
 `

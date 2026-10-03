@@ -1,22 +1,16 @@
 # Background images
 
-Drop high-quality cinema / film stills here:
+One still is picked from a hash of the current **UTC minute**, once per page load, by an
+inline script in `index.html` (see `scripts/backgroundsPlugin.ts`). That script also
+preloads the image so it arrives together with the page.
 
-- `.webp` (preferred)
-- `.jpg` / `.jpeg` / `.png` / `.avif`
+Each background is a pair of files with the same name: `<name>.avif` (served to modern
+browsers) and `<name>.webp` (fallback). Add one with:
 
-One image is chosen from a light hash of the current **UTC minute**,
-**once per page load**. It does not change until the user refreshes.
-
-## Performance tips
-
-- Prefer **WebP**
-- Aim for about **1600–2000px** wide
-- Target roughly **150–400KB** per image (backgrounds are faded, so heavy files are wasted)
-- Restart the Vite dev server (or rebuild) after adding/removing files
-
-Open this folder on Windows:
-
-```bat
-explorer K:\projects\cinema\frontend\public\backgrounds
+```bash
+yarn optimize-background path/to/still.jpg [name]
 ```
+
+This resizes to 1600px wide and compresses heavily (typically 15–60 KB per file); the
+images are shown faded, so the extra compression isn't visible. Rebuild or restart the
+dev server afterwards.

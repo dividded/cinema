@@ -22,3 +22,11 @@ export const formatHebrewDate = (dateStr: string): string => {
   
   return `${dateStr} | יום ${daysInHebrew[dayOfWeek]}`;
 }; 
+/** Today's date in Israel as YYYY-MM-DD; the schedule follows local days. */
+export const getTodayInIsrael = (): string =>
+  new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Jerusalem',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date());

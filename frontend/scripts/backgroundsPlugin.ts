@@ -1,48 +1,50 @@
 import fs from 'node:fs'
-import path from 'node:path'
-import type { Plugin, ViteDevServer } from 'vite'
+import type { Plugin } from 'vite'
 
-const IMAGE_EXT = /\.(jpe?g|png|webp|avif)$/i
-const SLOT_MS = 60 * 1000
+/** index.html marks where the script goes: early in <head>, before the stylesheet. */
+const PLACEHOLDER = '<!-- background-preload -->'
+import { BACKGROUND_ROTATE_MS, seededUnit } from '../src/utils/rotatingBackground'
 
-function listBackgroundFiles(dir: string): string[] {
+/** Background names (without extension); each needs a .webp and should have an .avif. */
+function listBackgrounds(dir: string): string[] {
   if (!fs.existsSync(dir)) return []
   return fs
     .readdirSync(dir)
-    .filter((name) => IMAGE_EXT.test(name) && name !== 'manifest.json')
+    .filter((name) => name.endsWith('.webp'))
+    .map((name) => name.slice(0, -'.webp'.length))
     .sort((a, b) => a.localeCompare(b))
 }
 
-function writeManifest(dir: string): string[] {
-  fs.mkdirSync(dir, { recursive: true })
-  const files = listBackgroundFiles(dir)
-  fs.writeFileSync(
-    path.join(dir, 'manifest.json'),
-    `${JSON.stringify({ files, rotateEveryMs: SLOT_MS }, null, 2)}\n`,
-  )
-  return files
-}
-
-/** Scans public/backgrounds and writes manifest.json for the rotator. */
-export function backgroundsManifestPlugin(backgroundsDir: string): Plugin {
-  const refresh = () => writeManifest(backgroundsDir)
+/**
+ * Inlines the background list and picker into index.html. The script picks this minute's
+ * image and preloads it at high priority, in parallel with the JS bundle; the app reads the
+ * pick from `window.__CINEMA_BACKGROUND__`.
+ */
+export function backgroundsPlugin(backgroundsDir: string): Plugin {
+  let base = '/'
 
   return {
-    name: 'backgrounds-manifest',
-    buildStart() {
-      refresh()
+    name: 'backgrounds',
+    configResolved(config) {
+      base = config.base
     },
-    configureServer(server: ViteDevServer) {
-      refresh()
-      server.watcher.add(backgroundsDir)
-      const onChange = (file: string) => {
-        if (!file.startsWith(backgroundsDir)) return
-        if (path.basename(file) === 'manifest.json') return
-        refresh()
-      }
-      server.watcher.on('add', onChange)
-      server.watcher.on('unlink', onChange)
-      server.watcher.on('change', onChange)
+    transformIndexHtml(html) {
+      const names = listBackgrounds(backgroundsDir)
+      const script = `(function () {
+  var names = ${JSON.stringify(names)};
+  if (!names.length) return;
+  var seededUnit = ${seededUnit.toString()};
+  var name = names[Math.floor(seededUnit(Math.floor(Date.now() / ${BACKGROUND_ROTATE_MS})) * names.length)];
+  window.__CINEMA_BACKGROUND__ = name;
+  var link = document.createElement('link');
+  link.rel = 'preload';
+  link.as = 'image';
+  link.type = 'image/avif';
+  link.href = ${JSON.stringify(`${base}backgrounds/`)} + encodeURIComponent(name) + '.avif';
+  link.setAttribute('fetchpriority', 'high');
+  document.head.appendChild(link);
+})();`
+      return html.replace(PLACEHOLDER, `<script>${script}</script>`)
     },
   }
 }

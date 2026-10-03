@@ -1,6 +1,9 @@
+// Shared by the app and scripts/backgroundsPlugin.ts, which inlines the picker into
+// index.html so the chosen image starts downloading before any JS has loaded.
+
 export const BACKGROUND_ROTATE_MS = 60 * 1000
 
-/** Deterministic 0..1 from a 32-bit seed (same seed → same value). */
+/** Deterministic 0..1 from a 32-bit seed (same seed → same value). Must stay self-contained. */
 export function seededUnit(seed: number): number {
   let t = (seed + 0x6d2b79f5) | 0
   t = Math.imul(t ^ (t >>> 15), t | 1)
@@ -8,26 +11,18 @@ export function seededUnit(seed: number): number {
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296
 }
 
-/** UTC minute bucket since epoch (Date.now() is UTC-based). */
-export function backgroundSlot(nowMs: number = Date.now()): number {
-  return Math.floor(nowMs / BACKGROUND_ROTATE_MS)
-}
-
-/**
- * Picks a stable "random" image for the current UTC minute.
- * Chosen once per page load — refresh to get a new pick.
- */
-export function pickBackgroundUrl(
-  urls: readonly string[],
+/** Picks a stable "random" background name for the current UTC minute. */
+export function pickBackground(
+  names: readonly string[],
   nowMs: number = Date.now(),
 ): string | null {
-  if (urls.length === 0) return null
-  const slot = backgroundSlot(nowMs)
-  const index = Math.floor(seededUnit(slot) * urls.length)
-  return urls[index] ?? urls[0]
+  if (names.length === 0) return null
+  const slot = Math.floor(nowMs / BACKGROUND_ROTATE_MS)
+  return names[Math.floor(seededUnit(slot) * names.length)] ?? names[0]
 }
 
-export function backgroundImageUrl(baseUrl: string, fileName: string): string {
-  const root = baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`
-  return `${root}backgrounds/${encodeURIComponent(fileName)}`
+/** Each background ships as AVIF with a WebP fallback. */
+export function backgroundImageUrls(baseUrl: string, name: string) {
+  const root = `${baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`}backgrounds/${encodeURIComponent(name)}`
+  return { avif: `${root}.avif`, webp: `${root}.webp` }
 }

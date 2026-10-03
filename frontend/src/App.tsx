@@ -1,4 +1,4 @@
-import { useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import { Movie } from './types/movie';
 import { BackgroundLayer } from './components/BackgroundLayer';
 import { BrandTitle } from './components/BrandTitle';
@@ -23,19 +23,21 @@ import { MOVIE_FILTERS } from './filters/registry';
 import { MovieFilterState } from './filters/types';
 import { useMovieIndex } from './hooks/useMovieIndex';
 import { useRotatingBackground } from './hooks/useRotatingBackground';
+import { useSchedule } from './hooks/useSchedule';
+
+const NO_MOVIES: Movie[] = [];
+const NO_DATES: string[] = [];
 
 function App() {
-  const [movies, setMovies] = useState<Movie[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { schedule, error } = useSchedule();
   const [searchQuery, setSearchQuery] = useState('');
   const [enabledFilterIds, setEnabledFilterIds] = useState<ReadonlySet<string>>(
     () => new Set(),
   );
 
   const deferredSearchQuery = useDeferredValue(searchQuery);
-  const movieIndex = useMovieIndex(movies);
-  const { imageUrl: backgroundUrl } = useRotatingBackground();
+  const movieIndex = useMovieIndex(schedule?.movies ?? NO_MOVIES, schedule?.dates ?? NO_DATES);
+  const backgroundImage = useRotatingBackground();
 
   const filterState = useMemo<MovieFilterState>(
     () => ({
@@ -50,35 +52,6 @@ function App() {
     [movieIndex.moviesByDate, filterState],
   );
 
-  const fetchMovies = async () => {
-    try {
-      const apiUrl = import.meta.env.VITE_API_URL ||
-        (import.meta.env.MODE === 'development'
-          ? 'http://localhost:3000/api/movies/cinematheque'
-          : 'https://cinema-api.cinematheque.workers.dev/api/movies/cinematheque');
-
-      const response = await fetch(apiUrl, {
-        cache: 'no-store'
-      });
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-
-      setMovies(data);
-      setLoading(false);
-      setError(null);
-    } catch (err) {
-      setError('Failed to fetch movies');
-      setLoading(false);
-      console.error('Error fetching movies:', err);
-    }
-  };
-
-  useEffect(() => {
-    fetchMovies();
-  }, []);
-
   const toggleFilter = (filterId: string) => {
     setEnabledFilterIds((current) => {
       const next = new Set(current);
@@ -91,12 +64,11 @@ function App() {
     });
   };
 
-  if (loading) return <LoadingMessage />;
   if (error) return <ErrorMessage>Failed to load movies. Please try again later.</ErrorMessage>;
 
   return (
     <Container>
-      <BackgroundLayer imageUrl={backgroundUrl} />
+      <BackgroundLayer image={backgroundImage} />
       <Header>
         <BrandTitle />
         <HeaderControls>
@@ -128,7 +100,11 @@ function App() {
           </SearchContainer>
         </HeaderControls>
       </Header>
-      <MovieSchedule index={movieIndex} filterResult={filterResult} />
+      {schedule ? (
+        <MovieSchedule index={movieIndex} filterResult={filterResult} />
+      ) : (
+        <LoadingMessage compact />
+      )}
     </Container>
   );
 }

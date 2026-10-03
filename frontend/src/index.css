@@ -1,4 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap');
+/* Only the glyphs of the "Cinematheque!" title (see src/assets/fonts/caveat-OFL.txt). */
+@font-face {
+  font-family: 'Caveat Title';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('./assets/fonts/caveat-title.woff2') format('woff2');
+}
 
 :root {
   --bg: #e6e3dc;
@@ -23,7 +30,7 @@
   --classic-chip: transparent;
   --focus: rgba(26, 25, 22, 0.12);
 
-  font-family: 'DM Sans', system-ui, sans-serif;
+  font-family: 'DM Sans Variable', 'DM Sans', system-ui, sans-serif;
   line-height: 1.5;
   font-weight: 400;
   color: var(--ink);
