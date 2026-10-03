@@ -10,6 +10,7 @@ stores the result; an empty or failed scrape never overwrites existing data.
 - `GET /api/health` shows when the data was last refreshed and the screening date range.
 - `POST /api/refresh` triggers a refresh on demand (rate-limited to once per 5 minutes).
 
-Pushes to `main` that touch the worker deploy it via `.github/workflows/deploy-worker.yml`, then refresh and
-verify the data. The workflow needs the `CLOUDFLARE_API_TOKEN` (with *Workers Scripts: Edit* and
-*Workers KV Storage: Edit*) and `CLOUDFLARE_ACCOUNT_ID` repository secrets.
+Deployment uses Cloudflare Workers Builds, so no Cloudflare keys live in GitHub. In the Cloudflare dashboard,
+open the `cinema-api` worker → **Settings → Builds → Connect** this repo, with root directory `cloudflare-worker`
+and deploy command `yarn deploy` (deploys, then refreshes and verifies the data). GitHub Actions
+(`.github/workflows/check-worker.yml`) type-checks and validates the worker on every push.
