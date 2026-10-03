@@ -25,7 +25,10 @@ interface DayResult {
   error?: string;
 }
 
-/** Last successfully fetched movies per date. Failed fetches never overwrite an entry. */
+/**
+ * Last successfully fetched movies per date, stored as one KV value per month and kept
+ * permanently (past days are history, never deleted). Failed fetches never overwrite an entry.
+ */
 type DayStore = Record<string, { movies: Movie[]; fetchedAt: string }>;
 
 /** What the frontend loads: every movie plus the dates we actually have data for. */
@@ -44,6 +47,8 @@ interface RefreshMeta {
   knownDates: number;
   failedDates: string[];
   missingDates: string[];
+  /** Month keys written by this refresh; earlier months stay in KV as history. */
+  monthsWritten: string[];
 }
 
 const REFRESH_TIMEOUT_MS = 5 * 60 * 1000;
@@ -61,9 +66,11 @@ const CORS_HEADERS: Record<string, string> = {
 
 const keys = (env: Env) => ({
   movies: env.MOVIES_KV_KEY,
-  days: `${env.MOVIES_KV_KEY}:days`,
+  month: (month: string) => `${env.MOVIES_KV_KEY}:month:${month}`,
   schedule: `${env.MOVIES_KV_KEY}:schedule`,
   meta: `${env.MOVIES_KV_KEY}:meta`,
+  /** Single all-days store used before per-month storage; migrated on the next refresh. */
+  legacyDays: `${env.MOVIES_KV_KEY}:days`,
 });
 
 function jsonResponse(body: unknown, status = 200, cacheControl = 'no-store'): Response {
@@ -91,6 +98,13 @@ async function cachedJsonResponse(request: Request, json: string): Promise<Respo
     return new Response(null, { status: 304, headers });
   }
   return new Response(json, { status: 200, headers });
+}
+
+const monthOf = (date: string) => date.slice(0, 7);
+
+function addDays(date: string, days: number): string {
+  const [year, month, day] = date.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
 }
 
 function todayInIsrael(): string {
@@ -149,7 +163,7 @@ function isDayResultList(value: unknown): value is DayResult[] {
   );
 }
 
-function summarize(schedule: Schedule, results: DayResult[], store: DayStore): RefreshMeta {
+function summarize(schedule: Schedule, results: DayResult[], store: DayStore, months: string[]): RefreshMeta {
   const dates = schedule.movies.flatMap(m => m.screenings.map(screeningDate)).sort();
   const failedDates = results.filter(d => !d.ok).map(d => d.date);
 
@@ -162,12 +176,44 @@ function summarize(schedule: Schedule, results: DayResult[], store: DayStore): R
     knownDates: schedule.dates.length,
     failedDates,
     missingDates: failedDates.filter(date => !store[date]),
+    monthsWritten: months,
   };
 }
 
+const MIGRATED = Symbol('migrated');
+
 /**
- * Scrapes the upcoming days and merges them into the stored schedule. Days that failed
- * keep their previous data; a scrape that found nothing at all is rejected outright.
+ * Loads the per-month day stores. Months that don't exist yet are seeded once from the
+ * older single-key store (or, before that existed, from the merged movie list).
+ */
+async function loadMonthStores(
+  env: Env,
+  months: string[],
+  now: string,
+): Promise<Record<string, DayStore> & { [MIGRATED]?: boolean }> {
+  const k = keys(env);
+  const stores: Record<string, DayStore> & { [MIGRATED]?: boolean } = {};
+  const loaded = await Promise.all(months.map(month => env.MOVIES_KV.get<DayStore>(k.month(month), 'json')));
+
+  let legacy: DayStore | null = null;
+  if (loaded.some(store => store === null)) {
+    legacy = await env.MOVIES_KV.get<DayStore>(k.legacyDays, 'json');
+    if (legacy) stores[MIGRATED] = true;
+    legacy ??= daysFromMovies((await env.MOVIES_KV.get<Movie[]>(k.movies, 'json')) ?? [], now);
+  }
+
+  for (const [i, month] of months.entries()) {
+    stores[month] =
+      loaded[i] ??
+      Object.fromEntries(Object.entries(legacy ?? {}).filter(([date]) => monthOf(date) === month));
+  }
+  return stores;
+}
+
+/**
+ * Scrapes the upcoming days and merges them into the stored days. Days that failed keep
+ * their previous data, past days are kept as history, and a scrape that found nothing at
+ * all is rejected outright. The served schedule only contains today onwards.
  */
 async function refreshMovies(env: Env): Promise<RefreshMeta> {
   const url = new URL(env.SCRAPE_URL);
@@ -188,32 +234,33 @@ async function refreshMovies(env: Env): Promise<RefreshMeta> {
 
   const k = keys(env);
   const now = new Date().toISOString();
-  const store =
-    (await env.MOVIES_KV.get<DayStore>(k.days, 'json')) ??
-    daysFromMovies((await env.MOVIES_KV.get<Movie[]>(k.movies, 'json')) ?? [], now);
-
-  for (const day of results) {
-    if (day.ok) store[day.date] = { movies: day.movies, fetchedAt: now };
-  }
   const today = todayInIsrael();
-  for (const date of Object.keys(store)) {
-    if (date < today) delete store[date];
+
+  // Load every month this refresh can touch: the fetch window plus any returned dates.
+  const months = new Set(results.map(day => monthOf(day.date)));
+  for (let i = 0; i < Number(env.FETCH_DAYS); i++) months.add(monthOf(addDays(today, i)));
+
+  const stores = await loadMonthStores(env, [...months], now);
+  for (const day of results) {
+    if (day.ok) stores[monthOf(day.date)][day.date] = { movies: day.movies, fetchedAt: now };
   }
 
-  const dates = Object.keys(store).sort();
+  const store: DayStore = Object.assign({}, ...Object.values(stores));
+  const dates = Object.keys(store).filter(date => date >= today).sort();
   const schedule: Schedule = {
     updatedAt: now,
     dates,
     movies: mergeMovies(dates.flatMap(date => store[date].movies)),
   };
-  const meta = summarize(schedule, results, store);
+  const meta = summarize(schedule, results, store, Object.keys(stores).sort());
 
   await Promise.all([
-    env.MOVIES_KV.put(k.days, JSON.stringify(store)),
+    ...Object.entries(stores).map(([month, monthStore]) => env.MOVIES_KV.put(k.month(month), JSON.stringify(monthStore))),
     env.MOVIES_KV.put(k.schedule, JSON.stringify(schedule)),
     env.MOVIES_KV.put(k.movies, JSON.stringify(schedule.movies)),
     env.MOVIES_KV.put(k.meta, JSON.stringify(meta)),
   ]);
+  if (stores[MIGRATED]) await env.MOVIES_KV.delete(k.legacyDays);
   return meta;
 }
 

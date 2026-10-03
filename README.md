@@ -9,7 +9,9 @@ the next `FETCH_DAYS` (45) days and merges the per-day results into what it alre
 
 - A day that failed to fetch (error, timeout, or the site's rate-limit page) keeps its previous data.
 - A scrape that found no movies at all is rejected, so a broken scrape never wipes the site.
-- Past days are dropped. The UI only lists days that were actually fetched.
+- Days are stored as one KV value per month and kept permanently (past days stay as history, about 60 KB
+  per month, far below KV's 25 MiB value limit; KV values without an expiry never expire). The served
+  schedule only contains today onwards, and the UI only lists days that were actually fetched.
 
 The backend is a stateless scraper; the worker is the only writer to KV.
 
