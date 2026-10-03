@@ -10,7 +10,8 @@ id = "7b38c01b510b4a198228b11ed83a5a64"
 
 [vars]
 MOVIES_KV_KEY = "cinemathequeMovies"
-REFRESH_URL = "https://cinema-mu-ten.vercel.app/api/movies/cinematheque/refresh"
+SCRAPE_URL = "https://cinema-mu-ten.vercel.app/api/movies/cinematheque/days"
+FETCH_DAYS = "45"
 
 # Refresh the movie data twice a day (UTC). Deploying replaces any
 # schedules set in the dashboard, so this file is the source of truth.

@@ -25,6 +25,7 @@ app.use((req, res, next) => {
 // Routes
 app.get('/api/movies/cinematheque', MovieController.getCinemathequeMovies);
 app.get('/api/movies/cinematheque/refresh', MovieController.forceRefreshCinemathequeMovies);
+app.get('/api/movies/cinematheque/days', MovieController.getCinemathequeDays);
 
 // Start the server only if this script is run directly
 function startServer() {
@@ -40,4 +41,4 @@ if (require.main === module) {
 
 // Export the Express app for Vercel
 export default app;
-
+
