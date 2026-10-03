@@ -1,0 +1,48 @@
+# Validates the Cloudflare Worker on every push. Deployment itself is done by
+# Cloudflare Workers Builds (connected to this repo in the Cloudflare dashboard),
+# so no Cloudflare credentials are stored in GitHub.
+name: Check Cloudflare Worker
+
+on:
+  push:
+    paths:
+      - 'cloudflare-worker/**'
+      - '.github/workflows/check-worker.yml'
+  pull_request:
+    paths:
+      - 'cloudflare-worker/**'
+      - '.github/workflows/check-worker.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: cloudflare-worker
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'yarn'
+          cache-dependency-path: 'cloudflare-worker/yarn.lock'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Type-check
+        run: yarn typecheck
+
+      - name: Validate wrangler config and bundle
+        run: npx wrangler deploy --dry-run --outdir dist
+
+      - name: Lint scripts
+        run: bash -n scripts/refresh-and-verify.sh

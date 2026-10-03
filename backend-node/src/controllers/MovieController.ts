@@ -83,6 +83,10 @@ export class MovieController {
   }
 
   private static async _persistMovies(movies: Movie[]): Promise<void> {
+    if (movies.length === 0) {
+      logger.warn('Fetched no movies; keeping previously stored data.');
+      return;
+    }
     MovieController._storeMoviesInCache(movies);
     await CloudflareKvClient.putMovies(movies);
   }
