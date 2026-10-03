@@ -17,10 +17,10 @@ The backend is a stateless scraper; the worker is the only writer to KV.
 - `GET /api/health` shows when the data was last refreshed, and which days failed.
 - `POST /api/refresh` triggers a refresh on demand (rate-limited to once per 5 minutes).
 
-Deployment uses Cloudflare Workers Builds, so no Cloudflare keys live in GitHub. In the Cloudflare dashboard,
-open the `cinema-api` worker → **Settings → Builds → Connect** this repo, with root directory `cloudflare-worker`
-and deploy command `yarn deploy` (deploys, then refreshes and verifies the data). GitHub Actions
-(`.github/workflows/check-worker.yml`) type-checks and validates the worker on every push.
+The worker deploys from GitHub Actions (`.github/workflows/check-worker.yml`): every push is type-checked and
+validated, and pushes to `main` run `yarn deploy` (deploy, then refresh and verify the data). This needs the
+`CLOUDFLARE_API_TOKEN` (the "Edit Cloudflare Workers" template) and `CLOUDFLARE_ACCOUNT_ID` repository secrets;
+without them the deploy job is skipped.
 
 ## Frontend loading
 
