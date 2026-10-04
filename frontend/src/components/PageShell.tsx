@@ -87,7 +87,7 @@ export function PageShell({ children }: { children: ReactNode }) {
         {LISTS.map((list) => (
           <Link key={list.id} to={listPath(list.id)}>{list.shortName}</Link>
         ))}
-        <Link to="/history">Screening history</Link>
+        <Link to="/history">History</Link>
       </Footer>
       {debug && (
         <Suspense fallback={null}>

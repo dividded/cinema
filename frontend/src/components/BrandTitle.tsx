@@ -1,3 +1,4 @@
+import { Link } from '../router'
 import { Title, TitleLetter } from './styled/Layout'
 
 const WORD = 'Cinematheque!'
@@ -21,7 +22,8 @@ const WOBBLE: ReadonlyArray<{ rotate: number; y: number; scale?: number }> = [
 
 export function BrandTitle() {
   return (
-    <Title aria-label="Cinematheque!">
+    <Title>
+      <Link to="/" aria-label="Cinematheque! Schedule">
       {WORD.split('').map((char, index) => {
         const wobble = WOBBLE[index] ?? { rotate: 0, y: 0 }
         return (
@@ -35,6 +37,7 @@ export function BrandTitle() {
           </TitleLetter>
         )
       })}
+      </Link>
     </Title>
   )
 }

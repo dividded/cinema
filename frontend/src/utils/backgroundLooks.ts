@@ -39,7 +39,12 @@ export const BACKGROUND_LOOKS: Record<string, Omit<BackgroundLook, 'file'>> = {
   'days-of-heaven': { mobilePosition: '23% top' },
   // Zoomed out on phones: more of the newspaper, and her face sits higher.
   'elevator-to-the-gallows': { mobilePosition: '74% top', mobileScale: 0.72 },
-  'mulholland-drive': { mobilePosition: '55% top' },
+  'mulholland-drive': { mobilePosition: '35% top' },
+  stalker: { mobilePosition: '40% top' },
+  // Zoomed out on phones so both faces show.
+  'blue-velvet': { mobilePosition: '30% top', mobileScale: 0.62 },
+  // Zoomed out: a smaller mask with soft edges, same colors.
+  'eyes-wide-shut': { scale: 0.8, mobilePosition: '32% top', mobileScale: 0.7 },
 }
 
 /**
@@ -47,15 +52,16 @@ export const BACKGROUND_LOOKS: Record<string, Omit<BackgroundLook, 'file'>> = {
  * the framing a live background had before its last change, for comparison.
  */
 export const DEBUG_BACKGROUND_VARIANTS: Record<string, BackgroundLook> = {
-  'velvet-wide': { file: 'blue-velvet', mobilePosition: '30% top', mobileScale: 0.62, note: 'Zoomed out on phones so both faces show' },
-  'ews-wide': { file: 'eyes-wide-shut', scale: 0.8, mobilePosition: '32% top', mobileScale: 0.7, note: 'Zoomed out (smaller mask, soft edges), same colors' },
-  'playtime-phone': { file: 'playtime', mobilePosition: '64% top', note: 'On phones, framed on the man instead of the building' },
-  '812-old': { file: '8-1-2', note: 'Before: centered on phones' },
-  'jazz-old': { file: 'all-that-jazz', note: 'Before: centered on phones' },
-  'cria-old': { file: 'cria', note: 'Before: centered on phones' },
-  'heaven-old': { file: 'days-of-heaven', note: 'Before: centered on phones' },
-  'gallows-old': { file: 'elevator-to-the-gallows', note: 'Before: centered, not zoomed out on phones' },
-  'mulho-old': { file: 'mulholland-drive', note: 'Before: centered on phones' },
+  'playtime-wide': { file: 'playtime', mobilePosition: '58% top', mobileScale: 0.7, note: 'Zoomed out on phones: the man, the building and the sphere' },
+  '812-old': { file: '8-1-2', note: 'Before' },
+  'jazz-old': { file: 'all-that-jazz', note: 'Before' },
+  'cria-old': { file: 'cria', note: 'Before' },
+  'heaven-old': { file: 'days-of-heaven', note: 'Before' },
+  'gallows-old': { file: 'elevator-to-the-gallows', note: 'Before' },
+  'mulho-old': { file: 'mulholland-drive', note: 'Before' },
+  'stalker-old': { file: 'stalker', note: 'Before' },
+  'velvet-old': { file: 'blue-velvet', note: 'Before' },
+  'ews-old': { file: 'eyes-wide-shut', note: 'Before' },
 }
 
 export interface ResolvedBackground {

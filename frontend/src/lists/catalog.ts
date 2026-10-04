@@ -28,7 +28,6 @@ export interface ListInfo {
   /** Short name for links between lists. */
   shortName: string;
   title: string;
-  subtitle: string;
   description: string;
   source: { label: string; url: string };
   /** Badge style; the Sight & Sound lists are the more festive ones. */
@@ -43,11 +42,7 @@ export const LISTS: readonly ListInfo[] = [
     badge: 'S&S Directors',
     shortName: 'S&S 2012 Directors',
     title: 'Sight & Sound 2012 · Directors’ Top 250',
-    subtitle: 'The greatest films of all time, as voted by 359 filmmakers',
-    description:
-      'Every ten years Sight & Sound asks filmmakers for their ten greatest films. In 2012, 359 directors ' +
-      'voted, and Tokyo Story came first. Ranks are by number of votes, so tied films share a rank; the ' +
-      'tie that straddles the 250 cut-off is listed on its own at the end.',
+    description: 'Every ten years Sight & Sound asks filmmakers to name the greatest films ever made. This is their 2012 list.',
     source: { label: 'BFI Sight & Sound poll 2012', url: 'https://www.bfi.org.uk/sight-and-sound/greatest-films-all-time' },
     tone: 'gold',
     load: () => import('../data/lists/ss-directors-2012.json').then((m) => m.default as ListFilm[]),
@@ -57,11 +52,7 @@ export const LISTS: readonly ListInfo[] = [
     badge: 'S&S Critics',
     shortName: 'S&S 2012 Critics',
     title: 'Sight & Sound 2012 · Critics’ Top 250',
-    subtitle: 'The greatest films of all time, as voted by 846 critics, programmers and academics',
-    description:
-      'The 2012 critics’ poll is the one where Vertigo finally unseated Citizen Kane after fifty years at ' +
-      'the top. Ranks are by number of votes, so tied films share a rank; the tie that straddles the 250 ' +
-      'cut-off is listed on its own at the end.',
+    description: 'The 2012 critics’ poll, the year Vertigo took the top spot from Citizen Kane.',
     source: { label: 'BFI Sight & Sound poll 2012', url: 'https://www.bfi.org.uk/sight-and-sound/greatest-films-all-time' },
     tone: 'gold',
     load: () => import('../data/lists/ss-critics-2012.json').then((m) => m.default as ListFilm[]),
@@ -71,10 +62,7 @@ export const LISTS: readonly ListInfo[] = [
     badge: 'TSPDT',
     shortName: 'TSPDT 1000',
     title: 'They Shoot Pictures, Don’t They? · 1,000 Greatest Films',
-    subtitle: 'The 2026 edition, aggregated from thousands of critics’ lists and polls',
-    description:
-      'They Shoot Pictures, Don’t They? combines thousands of critics’ and filmmakers’ lists, polls and ' +
-      'books into one ranking of the 1,000 greatest films, updated every year.',
+    description: 'The thousand greatest films, combined from critics’ lists and polls from around the world. 2026 edition.',
     source: { label: 'theyshootpictures.com', url: 'https://www.theyshootpictures.com/gf1000_all1000films_table.php' },
     tone: 'plain',
     load: () => import('../data/lists/tspdt-1000.json').then((m) => m.default as ListFilm[]),

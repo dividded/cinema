@@ -35,13 +35,6 @@ const Intro = styled.section`
     line-height: 1.1;
     letter-spacing: -0.005em;
   }
-  .subtitle {
-    margin-top: 0.3rem;
-    font-family: 'Cormorant Garamond Variable', 'Cormorant Garamond', Georgia, serif;
-    font-style: italic;
-    font-size: 1.15rem;
-    color: var(--ink-soft);
-  }
   .description {
     margin-top: 0.75rem;
     max-width: 38rem;
@@ -99,13 +92,6 @@ const Toolbar = styled.div`
   background: color-mix(in srgb, var(--bg) 92%, transparent);
   backdrop-filter: blur(6px);
   border-bottom: 1px solid var(--line);
-
-  .count {
-    margin-left: auto;
-    font-size: 0.75rem;
-    color: var(--muted);
-    font-variant-numeric: tabular-nums;
-  }
 `;
 
 const Rows = styled.ol`
@@ -143,12 +129,6 @@ const TieHeader = styled.button`
   }
   &[aria-expanded='true'] .title::after {
     content: ' ▾';
-  }
-  .explain {
-    display: block;
-    margin-top: 0.2rem;
-    font-size: 0.78rem;
-    color: var(--muted);
   }
 `;
 
@@ -257,12 +237,6 @@ const Side = styled.span`
   }
   &[data-open] .chevron {
     transform: rotate(90deg);
-  }
-
-  @media (max-width: 480px) {
-    .screened .word {
-      display: none;
-    }
   }
 `;
 
@@ -390,14 +364,10 @@ function FilmRow({
         </FilmText>
         <Side data-open={open ? '' : undefined}>
           {upcoming.length > 0 && (
-            <span className="soon" title={`${upcoming.length} upcoming screenings`}>
-              soon
-            </span>
+            <span className="soon">soon</span>
           )}
           {past.length > 0 && (
-            <span className="screened" title={`Screened ${past.length} times at the cinematheque`}>
-              {past.length}× <span className="word">screened</span>
-            </span>
+            <span className="screened">screened</span>
           )}
           <span className="year">{film.year ?? '—'}</span>
           <svg className="chevron" viewBox="0 0 10 10" aria-hidden="true">
@@ -429,15 +399,9 @@ function FilmRow({
                 <dd dir="auto">{film.original}</dd>
               </>
             )}
-            {film.votes != null && (
-              <>
-                <dt>Votes</dt>
-                <dd>{film.votes}</dd>
-              </>
-            )}
             {listedAs.length > 0 && (
               <>
-                <dt>At the cinematheque as</dt>
+                <dt>At the cinematheque</dt>
                 {listedAs.map((title) => (
                   <dd key={title} dir="rtl" className="hebrew">
                     {title}
@@ -464,7 +428,7 @@ function FilmRow({
               </>
             )}
           </dl>
-          {!screened && <p className="none">Not screened at the cinematheque since we started keeping track.</p>}
+          {!screened && <p className="none">Not shown at the cinematheque yet.</p>}
         </Details>
       )}
     </Row>
@@ -544,11 +508,9 @@ export default function ListPage({ list }: { list: ListInfo }) {
       <Page>
         <Intro>
           <h2>{list.title}</h2>
-          <p className="subtitle">{list.subtitle}</p>
           <p className="description">{list.description}</p>
           <p className="source">
-            Source: <a href={list.source.url} target="_blank" rel="noreferrer">{list.source.label}</a>. Films with a gold
-            edge have been (or soon will be) at the cinematheque; open one to see when.
+            <a href={list.source.url} target="_blank" rel="noreferrer">{list.source.label}</a>
           </p>
           <OtherLists>
             <span className="label">Other lists</span>
@@ -564,7 +526,7 @@ export default function ListPage({ list }: { list: ListInfo }) {
           <SearchContainer style={{ maxWidth: '16rem', flex: '1 1 10rem' }}>
             <SearchInput
               type="search"
-              placeholder="Search title, director, year"
+              placeholder="Search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               autoComplete="off"
@@ -574,20 +536,10 @@ export default function ListPage({ list }: { list: ListInfo }) {
           <FilterToggle type="button" $active={onlyScreened} aria-pressed={onlyScreened} onClick={() => setOnlyScreened((v) => !v)}>
             At the cinematheque
           </FilterToggle>
-          {films && (
-            <span className="count">
-              {filtering
-                ? `${visible.length} of ${films.length} films`
-                : tie
-                  ? `${tie.start} films + ${films.length - tie.start} tied at #${tie.rank}`
-                  : `${films.length} films`}
-              {screenedMovies && !filtering ? ` · ${screened.size} at the cinematheque` : ''}
-            </span>
-          )}
         </Toolbar>
 
         {loadError ? (
-          <Note>Couldn’t load this list. Please try again later.</Note>
+          <Note>Couldn’t load this list.</Note>
         ) : !films ? (
           <LoadingMessage compact />
         ) : visible.length === 0 ? (
@@ -610,13 +562,7 @@ export default function ListPage({ list }: { list: ListInfo }) {
             {tie && tied.length > 0 && (
               <>
                 <TieHeader type="button" aria-expanded={tieOpen} onClick={() => setShowTie((v) => !v)} disabled={filtering}>
-                  <span className="title">
-                    Tied at #{tie.rank} · {films.length - tie.start} films
-                  </span>
-                  <span className="explain">
-                    {films[tie.start].votes != null ? `${films[tie.start].votes} votes each. ` : ''}The 250 cut-off falls
-                    inside this tie, so it’s listed on its own.
-                  </span>
+                  <span className="title">Also tied at #{tie.rank}</span>
                 </TieHeader>
                 {tieOpen && (
                   <Rows>

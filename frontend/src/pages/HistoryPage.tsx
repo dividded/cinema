@@ -25,21 +25,6 @@ import { titleKey } from '../lists/match';
 // as the reader scrolls near the end (or jumps to it from the month bar). Day sections use
 // content-visibility, so even a long history only lays out what is on screen.
 
-const Intro = styled.p`
-  position: relative;
-  z-index: 1;
-  max-width: 820px;
-  margin: -0.75rem auto 1.25rem;
-  padding: 0 1.25rem;
-  color: var(--ink-soft);
-  font-size: 0.9rem;
-
-  @media (max-width: 768px) {
-    padding: 0 1rem;
-    margin-top: -0.5rem;
-  }
-`;
-
 const MonthBar = styled.nav`
   position: sticky;
   top: 0;
@@ -92,15 +77,6 @@ const MonthHeading = styled.h2`
   margin: 0 0 -0.75rem;
   scroll-margin-top: 4rem;
 
-  small {
-    font-family: 'DM Sans Variable', 'DM Sans', system-ui, sans-serif;
-    font-style: normal;
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: var(--muted);
-    letter-spacing: 0.02em;
-    margin-left: 0.6rem;
-  }
 `;
 
 const Note = styled.p`
@@ -176,9 +152,6 @@ function MonthSection({ data }: { data: HistoryMonth }) {
     <>
       <MonthHeading id={`month-${data.month}`}>
         {formatMonth(data.month)}
-        <small>
-          {data.dates.length} days · {data.movies.length} films
-        </small>
       </MonthHeading>
       {data.dates.map((date) => (
         <DateSectionBlock
@@ -217,9 +190,9 @@ function SearchResults({ query }: { query: string }) {
   }, [screened, query, today]);
   const listHits = useListHits(results);
 
-  if (error) return <Note>Couldn’t load the screening history.</Note>;
+  if (error) return <Note>Couldn’t load the history.</Note>;
   if (!screened) return <LoadingMessage compact />;
-  if (results.length === 0) return <Note>Nothing in the history matches “{query.trim()}”.</Note>;
+  if (results.length === 0) return <Note>No matches.</Note>;
 
   return (
     <ResultList>
@@ -330,7 +303,7 @@ export default function HistoryPage() {
           <SearchContainer style={{ maxWidth: '14rem' }}>
             <SearchInput
               type="search"
-              placeholder="Search all history"
+              placeholder="Search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               autoComplete="off"
@@ -339,7 +312,6 @@ export default function HistoryPage() {
           </SearchContainer>
         </HeaderControls>
       </Header>
-      <Intro>Everything the cinematheque has screened since we started keeping days, newest first.</Intro>
 
       {months && months.length > 1 && !searching && (
         <MonthBar aria-label="Months">
@@ -355,18 +327,17 @@ export default function HistoryPage() {
         {searching ? (
           <SearchResults query={deferredQuery} />
         ) : error ? (
-          <Note>Couldn’t load the screening history. Please try again later.</Note>
+          <Note>Couldn’t load the history.</Note>
         ) : !months ? (
           <LoadingMessage compact />
         ) : months.length === 0 ? (
-          <Note>No past days yet; they’ll show up here as days go by.</Note>
+          <Note>Nothing here yet.</Note>
         ) : (
           <>
             {shown.map((m) => (
               <MonthSection key={m.month} data={loaded[m.month]} />
             ))}
-            {failed ? <Note>Couldn’t load more. Please try again later.</Note> : busy && <LoadingMessage compact />}
-            {!hasMore && !busy && shown.length > 0 && <Note>That’s the beginning of the history.</Note>}
+            {failed ? <Note>Couldn’t load more.</Note> : busy && <LoadingMessage compact />}
             <Sentinel ref={sentinelRef} />
           </>
         )}

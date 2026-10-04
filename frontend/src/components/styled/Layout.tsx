@@ -60,6 +60,11 @@ export const Title = styled.h1`
   transform: rotate(-1.2deg);
   transform-origin: left center;
 
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
   @media (max-width: 768px) {
     font-size: clamp(2.3rem, 10vw, 3rem);
     align-self: flex-start;
