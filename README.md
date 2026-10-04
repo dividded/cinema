@@ -36,8 +36,9 @@ The page is built so everything needed for the first screen downloads in paralle
   letters) and the background image, which an inline script picks before any JS runs.
 - Backgrounds ship as AVIF with a WebP fallback (add new ones with `yarn optimize-background <image>`).
 - The last schedule is kept in `localStorage` and rendered immediately, then revalidated with an ETag.
-- A service worker (`public/sw.js`) serves the app from cache on repeat visits and updates it in the background,
-  so a new deploy shows up on the visit after the first one following it.
+- A service worker (`public/sw.js`) serves the hashed JS/CSS and backgrounds from cache on repeat visits. Pages are
+  fetched from the network first (so a deploy shows up on the next load), falling back to the cached page when
+  offline or after 2.5 s.
 
 ## Pages
 

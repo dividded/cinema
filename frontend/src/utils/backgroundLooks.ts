@@ -24,6 +24,8 @@ export interface BackgroundLook {
   filter?: string
   /** Wash strength: 1 is the default, higher pushes the image further into the paper color. */
   wash?: number
+  /** What a test variant changes, shown in the ?debugbg picker. */
+  note?: string
 }
 
 export const DEFAULT_POSITION = 'center top'
@@ -41,19 +43,19 @@ export const BACKGROUND_LOOKS: Record<string, Omit<BackgroundLook, 'file'>> = {
 }
 
 /**
- * Debug-only looks, shown in the ?debugbg picker after the regular backgrounds. <film>-old is
- * the framing before a change to the rotation, for comparison.
+ * Test-only looks, listed after the live ones in the ?debugbg picker. A <film>-old variant is
+ * the framing a live background had before its last change, for comparison.
  */
 export const DEBUG_BACKGROUND_VARIANTS: Record<string, BackgroundLook> = {
-  'velvet-wide': { file: 'blue-velvet', mobilePosition: '30% top', mobileScale: 0.62 },
-  'ews-wide': { file: 'eyes-wide-shut', scale: 0.8, mobilePosition: '32% top', mobileScale: 0.7 },
-  'playtime-m': { file: 'playtime', mobilePosition: '64% top' },
-  '812-old': { file: '8-1-2' },
-  'jazz-old': { file: 'all-that-jazz' },
-  'cria-old': { file: 'cria' },
-  'heaven-old': { file: 'days-of-heaven' },
-  'gallows-old': { file: 'elevator-to-the-gallows' },
-  'mulho-old': { file: 'mulholland-drive' },
+  'velvet-wide': { file: 'blue-velvet', mobilePosition: '30% top', mobileScale: 0.62, note: 'Zoomed out on phones so both faces show' },
+  'ews-wide': { file: 'eyes-wide-shut', scale: 0.8, mobilePosition: '32% top', mobileScale: 0.7, note: 'Zoomed out (smaller mask, soft edges), same colors' },
+  'playtime-phone': { file: 'playtime', mobilePosition: '64% top', note: 'On phones, framed on the man instead of the building' },
+  '812-old': { file: '8-1-2', note: 'Before: centered on phones' },
+  'jazz-old': { file: 'all-that-jazz', note: 'Before: centered on phones' },
+  'cria-old': { file: 'cria', note: 'Before: centered on phones' },
+  'heaven-old': { file: 'days-of-heaven', note: 'Before: centered on phones' },
+  'gallows-old': { file: 'elevator-to-the-gallows', note: 'Before: centered, not zoomed out on phones' },
+  'mulho-old': { file: 'mulholland-drive', note: 'Before: centered on phones' },
 }
 
 export interface ResolvedBackground {

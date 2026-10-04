@@ -12,7 +12,9 @@ export interface ListFilm {
   imdb?: string;
   /** Hebrew title (from Wikidata). */
   he?: string;
-  /** Other titles: the list's own, the original-language one, alternates. */
+  /** Original-language title, when it differs from `title`. */
+  original?: string;
+  /** Other titles (the list's own, the original, alternates and aliases), for matching only. */
   aka?: string[];
   votes?: number;
   country?: string;
@@ -44,8 +46,8 @@ export const LISTS: readonly ListInfo[] = [
     subtitle: 'The greatest films of all time, as voted by 359 filmmakers',
     description:
       'Every ten years Sight & Sound asks filmmakers for their ten greatest films. In 2012, 359 directors ' +
-      'voted, and Tokyo Story came first. Ranks are by number of votes, so tied films share a rank; ' +
-      'everything with three or more votes ties at 224, which takes the list to 322 films.',
+      'voted, and Tokyo Story came first. Ranks are by number of votes, so tied films share a rank; the ' +
+      'tie that straddles the 250 cut-off is listed on its own at the end.',
     source: { label: 'BFI Sight & Sound poll 2012', url: 'https://www.bfi.org.uk/sight-and-sound/greatest-films-all-time' },
     tone: 'gold',
     load: () => import('../data/lists/ss-directors-2012.json').then((m) => m.default as ListFilm[]),
@@ -58,8 +60,8 @@ export const LISTS: readonly ListInfo[] = [
     subtitle: 'The greatest films of all time, as voted by 846 critics, programmers and academics',
     description:
       'The 2012 critics’ poll is the one where Vertigo finally unseated Citizen Kane after fifty years at ' +
-      'the top. Ranks are by number of votes, so tied films share a rank (a long tie at 235 makes the ' +
-      'list run past 250).',
+      'the top. Ranks are by number of votes, so tied films share a rank; the tie that straddles the 250 ' +
+      'cut-off is listed on its own at the end.',
     source: { label: 'BFI Sight & Sound poll 2012', url: 'https://www.bfi.org.uk/sight-and-sound/greatest-films-all-time' },
     tone: 'gold',
     load: () => import('../data/lists/ss-critics-2012.json').then((m) => m.default as ListFilm[]),
@@ -87,3 +89,15 @@ export const imdbUrl = (id: string): string => `https://www.imdb.com/title/${id}
 
 /** Anchor of a film on its list page, so a badge can scroll to and open it. */
 export const filmAnchor = (rank: number, imdb?: string): string => (imdb ? `film-${imdb}` : `rank-${rank}`);
+
+/**
+ * Where a ranked list crosses its nominal size: ranks come from vote counts, so the last tie
+ * can straddle the cut-off (99 films share #224 in the directors' poll). Returns the index
+ * where that tie starts, or null when the list fits.
+ */
+export function cutoffTie(films: readonly ListFilm[], size = 250): { start: number; rank: number } | null {
+  if (films.length <= size) return null;
+  const rank = films[size - 1].rank;
+  const start = films.findIndex((film) => film.rank === rank);
+  return { start, rank };
+}

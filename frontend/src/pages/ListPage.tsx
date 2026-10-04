@@ -7,7 +7,7 @@ import { FilterToggle, SearchContainer, SearchInput } from '../components/styled
 import { LoadingMessage } from '../components/styled/Feedback';
 import { Header, TitleBlock } from '../components/styled/Layout';
 import { fetchScreened, ScreenedMovie, useLoaded } from '../hooks/useHistoryData';
-import { filmAnchor, imdbUrl, LISTS, ListFilm, ListInfo, listPath } from '../lists/catalog';
+import { cutoffTie, filmAnchor, imdbUrl, LISTS, ListFilm, ListInfo, listPath } from '../lists/catalog';
 import { buildListIndex, filmTitles, matchMovie } from '../lists/match';
 import { Link } from '../router';
 import { getTodayInIsrael } from '../utils/dateTime';
@@ -93,9 +93,10 @@ const Toolbar = styled.div`
   align-items: baseline;
   flex-wrap: wrap;
   gap: 0.5rem 1.25rem;
-  padding: 0.6rem 0;
-  margin-bottom: 0.25rem;
-  background: color-mix(in srgb, var(--bg) 90%, transparent);
+  padding: 0.65rem 0.85rem;
+  margin: 0 -0.85rem 0.25rem;
+  border-radius: 0 0 8px 8px;
+  background: color-mix(in srgb, var(--bg) 92%, transparent);
   backdrop-filter: blur(6px);
   border-bottom: 1px solid var(--line);
 
@@ -109,6 +110,46 @@ const Toolbar = styled.div`
 
 const Rows = styled.ol`
   list-style: none;
+`;
+
+const TieHeader = styled.button`
+  appearance: none;
+  display: block;
+  width: 100%;
+  margin-top: 1.5rem;
+  padding: 0.85rem 0.75rem;
+  border: 1px dashed var(--line-strong);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.25);
+  color: inherit;
+  text-align: left;
+  font: inherit;
+
+  &:not(:disabled):hover {
+    background: rgba(255, 255, 255, 0.45);
+  }
+  &:disabled {
+    cursor: default;
+  }
+
+  .title {
+    display: block;
+    font-weight: 700;
+    font-size: 0.9rem;
+  }
+  .title::after {
+    content: ' ▸';
+    color: var(--muted);
+  }
+  &[aria-expanded='true'] .title::after {
+    content: ' ▾';
+  }
+  .explain {
+    display: block;
+    margin-top: 0.2rem;
+    font-size: 0.78rem;
+    color: var(--muted);
+  }
 `;
 
 const Row = styled.li<{ $screened: boolean; $flash: boolean }>`
@@ -187,6 +228,17 @@ const Side = styled.span`
     font-weight: 600;
     color: var(--ink-soft);
   }
+  .soon {
+    padding: 0.08rem 0.4rem;
+    border-radius: 3px;
+    font-size: 0.66rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--weekend);
+    background: rgba(90, 79, 120, 0.14);
+    white-space: nowrap;
+  }
   .screened {
     padding: 0.08rem 0.4rem;
     border-radius: 3px;
@@ -215,7 +267,7 @@ const Side = styled.span`
 `;
 
 const Details = styled.div`
-  padding: 0 0.5rem 0.85rem 3.85rem;
+  padding: 0 0.5rem 0.9rem 3.85rem;
   font-size: 0.82rem;
   color: var(--ink-soft);
 
@@ -227,7 +279,7 @@ const Details = styled.div`
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem 1rem;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.6rem;
   }
   .links a {
     display: inline-flex;
@@ -236,23 +288,37 @@ const Details = styled.div`
     font-weight: 600;
     font-size: 0.78rem;
   }
-  .aka {
-    color: var(--muted);
-    font-size: 0.76rem;
-    margin-bottom: 0.5rem;
-  }
-  ul {
-    list-style: none;
+  dl {
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
   }
-  li {
+  dt {
+    margin-top: 0.45rem;
+    font-size: 0.64rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  dt:first-of-type {
+    margin-top: 0;
+  }
+  dd {
+    margin: 0.1rem 0 0;
     font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
   }
-  .upcoming {
+  dd.hebrew {
+    text-align: right;
+    unicode-bidi: plaintext;
+  }
+  dd.upcoming {
     font-weight: 700;
     color: var(--weekend);
+  }
+  .none {
+    color: var(--muted);
+    font-style: italic;
   }
 `;
 
@@ -307,10 +373,12 @@ function FilmRow({
   today: string;
 }) {
   const id = filmAnchor(film.rank, film.imdb);
-  const count = screened?.screenings.length ?? 0;
-  const aka = (film.aka ?? []).filter((t) => t !== film.title).slice(0, 3);
+  const past = screened?.screenings.filter((s) => s.slice(0, 10) < today) ?? [];
+  const upcoming = screened?.screenings.filter((s) => s.slice(0, 10) >= today) ?? [];
+  // The cinematheque's own (usually Hebrew) names for it, when they differ from the list's.
+  const listedAs = [...new Set(screened?.movies.map((m) => m.title) ?? [])].filter((t) => t !== film.title);
   return (
-    <Row id={id} $screened={count > 0} $flash={flash}>
+    <Row id={id} $screened={Boolean(screened)} $flash={flash}>
       <RowButton type="button" aria-expanded={open} aria-controls={`${id}-details`} onClick={onToggle}>
         <Rank>{film.rank}</Rank>
         <FilmText>
@@ -321,9 +389,14 @@ function FilmRow({
           </span>
         </FilmText>
         <Side data-open={open ? '' : undefined}>
-          {count > 0 && (
-            <span className="screened" title={`Screened ${count} times at the cinematheque`}>
-              {count}× <span className="word">screened</span>
+          {upcoming.length > 0 && (
+            <span className="soon" title={`${upcoming.length} upcoming screenings`}>
+              soon
+            </span>
+          )}
+          {past.length > 0 && (
+            <span className="screened" title={`Screened ${past.length} times at the cinematheque`}>
+              {past.length}× <span className="word">screened</span>
             </span>
           )}
           <span className="year">{film.year ?? '—'}</span>
@@ -349,41 +422,49 @@ function FilmRow({
                 </a>
               ))}
           </div>
-          {(aka.length > 0 || film.he) && (
-            <div className="aka">
-              Also:{' '}
-              {[film.he, ...aka].filter(Boolean).map((title, i) => (
-                <span key={title}>
-                  {i > 0 && ' · '}
-                  <bdi>{title}</bdi>
-                </span>
-              ))}
-              {film.votes ? ` · ${film.votes} votes` : ''}
-            </div>
-          )}
-          {screened ? (
-            <>
-              <div>
-                Screened {count === 1 ? 'once' : `${count} times`} since we started keeping track
-                {screened.movies.length === 1 && screened.movies[0].title !== film.title && (
-                  <>
-                    {' '}(as <bdi>{screened.movies[0].title}</bdi>)
-                  </>
-                )}
-                :
-              </div>
-              <ul>
-                {[...screened.screenings].reverse().map((dateTime) => (
-                  <li key={dateTime} className={dateTime.slice(0, 10) >= today ? 'upcoming' : undefined}>
-                    {formatShortDate(dateTime)}
-                    {dateTime.slice(0, 10) >= today ? ' · upcoming' : ''}
-                  </li>
+          <dl>
+            {film.original && (
+              <>
+                <dt>Original title</dt>
+                <dd dir="auto">{film.original}</dd>
+              </>
+            )}
+            {film.votes != null && (
+              <>
+                <dt>Votes</dt>
+                <dd>{film.votes}</dd>
+              </>
+            )}
+            {listedAs.length > 0 && (
+              <>
+                <dt>At the cinematheque as</dt>
+                {listedAs.map((title) => (
+                  <dd key={title} dir="rtl" className="hebrew">
+                    {title}
+                  </dd>
                 ))}
-              </ul>
-            </>
-          ) : (
-            <div>Not screened at the cinematheque since we started keeping track.</div>
-          )}
+              </>
+            )}
+            {upcoming.length > 0 && (
+              <>
+                <dt>Upcoming</dt>
+                {upcoming.map((dateTime) => (
+                  <dd key={dateTime} className="upcoming">
+                    {formatShortDate(dateTime)}
+                  </dd>
+                ))}
+              </>
+            )}
+            {past.length > 0 && (
+              <>
+                <dt>Screened</dt>
+                {[...past].reverse().map((dateTime) => (
+                  <dd key={dateTime}>{formatShortDate(dateTime)}</dd>
+                ))}
+              </>
+            )}
+          </dl>
+          {!screened && <p className="none">Not screened at the cinematheque since we started keeping track.</p>}
         </Details>
       )}
     </Row>
@@ -398,6 +479,7 @@ export default function ListPage({ list }: { list: ListInfo }) {
   const [onlyScreened, setOnlyScreened] = useState(false);
   const [open, setOpen] = useState<ReadonlySet<number>>(() => new Set());
   const [flash, setFlash] = useState<number | null>(null);
+  const [showTie, setShowTie] = useState(false);
   const deferredQuery = useDeferredValue(query);
   const today = getTodayInIsrael();
 
@@ -419,6 +501,12 @@ export default function ListPage({ list }: { list: ListInfo }) {
       .filter((i) => (!onlyScreened || screened.has(i)) && (!q || searchText[i].includes(q) || String(films[i].rank) === q));
   }, [films, deferredQuery, onlyScreened, screened, searchText]);
 
+  const tie = useMemo(() => (films ? cutoffTie(films) : null), [films]);
+  const filtering = onlyScreened || deferredQuery.trim() !== '';
+  const ranked = tie ? visible.filter((i) => i < tie.start) : visible;
+  const tied = tie ? visible.filter((i) => i >= tie.start) : [];
+  const tieOpen = showTie || filtering;
+
   // A badge links to #film-<imdb>: open that film and bring it into view.
   useEffect(() => {
     if (!films) return;
@@ -426,6 +514,8 @@ export default function ListPage({ list }: { list: ListInfo }) {
     if (!hash) return;
     const i = films.findIndex((film) => filmAnchor(film.rank, film.imdb) === hash);
     if (i < 0) return;
+    const tieStart = cutoffTie(films)?.start;
+    if (tieStart != null && i >= tieStart) setShowTie(true);
     setOpen(new Set([i]));
     setFlash(i);
     requestAnimationFrame(() => document.getElementById(hash)?.scrollIntoView({ block: 'center' }));
@@ -457,8 +547,8 @@ export default function ListPage({ list }: { list: ListInfo }) {
           <p className="subtitle">{list.subtitle}</p>
           <p className="description">{list.description}</p>
           <p className="source">
-            Source: <a href={list.source.url} target="_blank" rel="noreferrer">{list.source.label}</a>. Gold-edged
-            films have screened at the cinematheque; open one to see when.
+            Source: <a href={list.source.url} target="_blank" rel="noreferrer">{list.source.label}</a>. Films with a gold
+            edge have been (or soon will be) at the cinematheque; open one to see when.
           </p>
           <OtherLists>
             <span className="label">Other lists</span>
@@ -482,12 +572,16 @@ export default function ListPage({ list }: { list: ListInfo }) {
             />
           </SearchContainer>
           <FilterToggle type="button" $active={onlyScreened} aria-pressed={onlyScreened} onClick={() => setOnlyScreened((v) => !v)}>
-            Screened here
+            At the cinematheque
           </FilterToggle>
           {films && (
             <span className="count">
-              {visible.length === films.length ? `${films.length} films` : `${visible.length} of ${films.length}`}
-              {screenedMovies ? ` · ${screened.size} screened` : ''}
+              {filtering
+                ? `${visible.length} of ${films.length} films`
+                : tie
+                  ? `${tie.start} films + ${films.length - tie.start} tied at #${tie.rank}`
+                  : `${films.length} films`}
+              {screenedMovies && !filtering ? ` · ${screened.size} at the cinematheque` : ''}
             </span>
           )}
         </Toolbar>
@@ -499,19 +593,49 @@ export default function ListPage({ list }: { list: ListInfo }) {
         ) : visible.length === 0 ? (
           <Note>No films match.</Note>
         ) : (
-          <Rows>
-            {visible.map((i) => (
-              <FilmRow
-                key={i}
-                film={films[i]}
-                screened={screened.get(i)}
-                open={open.has(i)}
-                flash={flash === i}
-                onToggle={() => toggle(i)}
-                today={today}
-              />
-            ))}
-          </Rows>
+          <>
+            <Rows>
+              {ranked.map((i) => (
+                <FilmRow
+                  key={i}
+                  film={films[i]}
+                  screened={screened.get(i)}
+                  open={open.has(i)}
+                  flash={flash === i}
+                  onToggle={() => toggle(i)}
+                  today={today}
+                />
+              ))}
+            </Rows>
+            {tie && tied.length > 0 && (
+              <>
+                <TieHeader type="button" aria-expanded={tieOpen} onClick={() => setShowTie((v) => !v)} disabled={filtering}>
+                  <span className="title">
+                    Tied at #{tie.rank} · {films.length - tie.start} films
+                  </span>
+                  <span className="explain">
+                    {films[tie.start].votes != null ? `${films[tie.start].votes} votes each. ` : ''}The 250 cut-off falls
+                    inside this tie, so it’s listed on its own.
+                  </span>
+                </TieHeader>
+                {tieOpen && (
+                  <Rows>
+                    {tied.map((i) => (
+                      <FilmRow
+                        key={i}
+                        film={films[i]}
+                        screened={screened.get(i)}
+                        open={open.has(i)}
+                        flash={flash === i}
+                        onToggle={() => toggle(i)}
+                        today={today}
+                      />
+                    ))}
+                  </Rows>
+                )}
+              </>
+            )}
+          </>
         )}
       </Page>
     </>

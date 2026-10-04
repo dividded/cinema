@@ -1,6 +1,7 @@
-// Makes repeat visits load instantly from cache. Hashed build assets never change, so they
-// are served cache-first; everything else of ours (the page, backgrounds, icons) is served
-// from cache and refreshed in the background for the next visit. API requests go to another
+// Makes repeat visits fast and the site usable offline. Hashed build assets never change, so
+// they are served cache-first. Pages are network-first (a deploy shows up on the next load),
+// falling back to the cached page when offline or when the network is slow. Everything else
+// of ours (backgrounds, icons) is served from cache and refreshed in the background. API requests go to another
 // origin and are left alone (the app keeps its own copy of the schedule).
 const CACHE = 'cinema-v1';
 
@@ -22,7 +23,9 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(request.url);
   if (request.method !== 'GET' || url.origin !== self.location.origin) return;
 
-  event.respondWith(url.pathname.includes('/assets/') ? cacheFirst(request) : staleWhileRevalidate(event));
+  if (url.pathname.includes('/assets/')) event.respondWith(cacheFirst(request));
+  else if (request.mode === 'navigate') event.respondWith(networkFirstPage(event));
+  else event.respondWith(staleWhileRevalidate(event));
 });
 
 async function cacheFirst(request) {
@@ -35,17 +38,35 @@ async function cacheFirst(request) {
   return response;
 }
 
-async function staleWhileRevalidate(event) {
-  const { request } = event;
-  const isPage = request.mode === 'navigate';
-  const cache = await caches.open(CACHE);
-  const cached = await cache.match(request, { ignoreSearch: isPage });
+// How long a page load waits for the network before showing the cached page instead.
+const PAGE_NETWORK_TIMEOUT_MS = 2500;
 
+async function networkFirstPage(event) {
+  const { request } = event;
+  const cache = await caches.open(CACHE);
   const network = fetch(request).then(async (response) => {
     if (response.ok) {
       await cache.put(request, response.clone());
-      if (isPage) await pruneScripts(cache, await response.clone().text());
+      await pruneScripts(cache, await response.clone().text());
     }
+    return response;
+  });
+  event.waitUntil(network.catch(() => {}));
+
+  const timeout = new Promise((resolve) => setTimeout(resolve, PAGE_NETWORK_TIMEOUT_MS, null));
+  const fast = await Promise.race([network.catch(() => null), timeout]);
+  if (fast) return fast;
+  const cached = await cache.match(request, { ignoreSearch: true });
+  return cached ?? network;
+}
+
+async function staleWhileRevalidate(event) {
+  const { request } = event;
+  const cache = await caches.open(CACHE);
+  const cached = await cache.match(request);
+
+  const network = fetch(request).then(async (response) => {
+    if (response.ok) await cache.put(request, response.clone());
     return response;
   });
 

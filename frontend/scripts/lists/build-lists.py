@@ -42,19 +42,19 @@ MAX_RANK = 250
 CACHE_DIR = SOURCES / '.sparql-cache'
 
 
-def sparql(query: str) -> list[dict]:
+def sparql(query: str, retries: int = 5) -> list[dict]:
     """Runs a query, caching results on disk so reruns don't hit Wikidata again."""
     CACHE_DIR.mkdir(exist_ok=True)
     cached = CACHE_DIR / (hashlib.sha1(query.encode()).hexdigest() + '.json')
     if cached.exists():
         return json.loads(cached.read_text(encoding='utf-8'))
-    rows = run_sparql(query)
+    rows = run_sparql(query, retries)
     cached.write_text(json.dumps(rows, ensure_ascii=False), encoding='utf-8')
     return rows
 
 
-def run_sparql(query: str) -> list[dict]:
-    for attempt in range(5):
+def run_sparql(query: str, retries: int = 5) -> list[dict]:
+    for attempt in range(retries):
         try:
             request = urllib.request.Request(
                 SPARQL + '?' + urllib.parse.urlencode({'query': query}),
@@ -65,7 +65,7 @@ def run_sparql(query: str) -> list[dict]:
             return [{k: v['value'] for k, v in row.items()} for row in data['results']['bindings']]
         except Exception as error:  # noqa: BLE001 - retry anything (timeouts, 429s)
             print(f'  sparql retry {attempt + 1}: {error}', file=sys.stderr)
-            time.sleep(5 * (attempt + 1))
+            time.sleep(3 * (attempt + 1))
     raise RuntimeError('SPARQL query kept failing')
 
 
@@ -202,12 +202,41 @@ def fulltext_candidates(terms: list[str]) -> dict[str, set[str]]:
             ?item wikibase:apiOutputItem mwapi:title.
           }}
         }}'''
-        for row in sparql(query):
+        try:
+            rows = sparql(query, retries=2)
+        except RuntimeError:
+            print(f'  full-text search failed for {terms[i:i + 10]}; skipping', file=sys.stderr)
+            continue
+        for row in rows:
             item = row['item'].rsplit('/', 1)[-1]
             if re.fullmatch(r'Q\d+', item):
                 out.setdefault(row['term'], set()).add(item)
         time.sleep(0.5)
     return out
+
+
+DETAILS_QUERY = '''SELECT ?item ?imdb ?date ?dirLabel ?en ?he ?orig ?alias WHERE {{
+  VALUES ?item {{ {values} }}
+  ?item wdt:P345 ?imdb . FILTER(STRSTARTS(?imdb, "tt"))
+  OPTIONAL {{ ?item wdt:P577 ?date }}
+  OPTIONAL {{ ?item wdt:P57 ?dir . ?dir rdfs:label ?dirLabel . FILTER(LANG(?dirLabel) IN ("en", "mul")) }}
+  OPTIONAL {{ ?item rdfs:label ?en . FILTER(LANG(?en) = "en") }}
+  OPTIONAL {{ ?item rdfs:label ?he . FILTER(LANG(?he) = "he") }}
+  OPTIONAL {{ ?item wdt:P1476 ?orig }}
+  OPTIONAL {{ ?item skos:altLabel ?alias . FILTER(LANG(?alias) = "en") }}
+}}'''
+
+
+def details_rows(qids: list[str]) -> list[dict]:
+    """Details for some items; a batch that keeps failing is split in half, a lone failing item skipped."""
+    try:
+        return sparql(DETAILS_QUERY.format(values=' '.join(f'wd:{q}' for q in qids)), retries=2)
+    except RuntimeError:
+        if len(qids) == 1:
+            print(f'  skipped {qids[0]} (Wikidata kept failing)', file=sys.stderr)
+            return []
+        half = len(qids) // 2
+        return details_rows(qids[:half]) + details_rows(qids[half:])
 
 
 def details(qids: set[str]) -> dict[str, dict]:
@@ -216,21 +245,10 @@ def details(qids: set[str]) -> dict[str, dict]:
     # Small batches: one row per (director, alias) pair can make responses huge and truncated.
     batch = 80 if len(qids) < 2500 else 25
     for i in range(0, len(qids), batch):
-        values = ' '.join(f'wd:{q}' for q in qids[i:i + batch])
-        query = f'''SELECT ?item ?imdb ?date ?dirLabel ?en ?he ?orig ?alias WHERE {{
-          VALUES ?item {{ {values} }}
-          ?item wdt:P345 ?imdb . FILTER(STRSTARTS(?imdb, "tt"))
-          OPTIONAL {{ ?item wdt:P577 ?date }}
-          OPTIONAL {{ ?item wdt:P57 ?dir . ?dir rdfs:label ?dirLabel . FILTER(LANG(?dirLabel) IN ("en", "mul")) }}
-          OPTIONAL {{ ?item rdfs:label ?en . FILTER(LANG(?en) = "en") }}
-          OPTIONAL {{ ?item rdfs:label ?he . FILTER(LANG(?he) = "he") }}
-          OPTIONAL {{ ?item wdt:P1476 ?orig }}
-          OPTIONAL {{ ?item skos:altLabel ?alias . FILTER(LANG(?alias) = "en") }}
-        }}'''
-        for row in sparql(query):
+        for row in details_rows(qids[i:i + batch]):
             q = row['item'].rsplit('/', 1)[1]
             d = info.setdefault(q, {'imdb': row['imdb'], 'years': set(), 'directors': set(), 'titles': {}, 'aliases': set()})
-            if 'date' in row and row['date'][:4].lstrip('-').isdigit() and not row['date'].startswith('-'):
+            if 'date' in row and row['date'][:4].isdigit():
                 d['years'].add(int(row['date'][:4]))
             if 'dirLabel' in row:
                 d['directors'].add(row['dirLabel'])
@@ -322,6 +340,9 @@ def write(list_id: str, entries: list[dict]) -> None:
             film['imdb'] = e['imdb']
         if titles.get('he'):
             film['he'] = titles['he']
+        original = titles.get('orig') or (e['title'] if e['title'] != display else None)
+        if original and original != display:
+            film['original'] = original
         if other:
             film['aka'] = other
         if e.get('votes'):

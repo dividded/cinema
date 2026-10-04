@@ -37,6 +37,27 @@ const Label = styled.span`
   font-size: 0.7rem;
 `
 
+const Status = styled.span<{ $live: boolean }>`
+  flex: 0 0 auto;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: ${(p) => (p.$live ? '#1a1916' : '#f3f1eb')};
+  background: ${(p) => (p.$live ? '#d4af37' : 'rgba(255, 255, 255, 0.18)')};
+`
+
+const Note = styled.div`
+  padding: 0 0.75rem 0.35rem;
+  font-size: 0.72rem;
+  opacity: 0.75;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`
+
 const Current = styled.span`
   flex: 1 1 auto;
   min-width: 0;
@@ -142,6 +163,8 @@ const Pill = styled.button`
 export default function BackgroundDebugPanel({ current }: { current: string | null }) {
   const names = allBackgroundNames()
   const variantStart = names.findIndex((name) => name in DEBUG_BACKGROUND_VARIANTS)
+  const live = current !== null && !(current in DEBUG_BACKGROUND_VARIANTS)
+  const note = current ? DEBUG_BACKGROUND_VARIANTS[current]?.note : undefined
   const [open, setOpen] = useState(true)
   const stripRef = useRef<HTMLDivElement>(null)
   const index = current ? names.indexOf(current) : -1
@@ -173,7 +196,7 @@ export default function BackgroundDebugPanel({ current }: { current: string | nu
   if (!open) {
     return (
       <Pill type="button" onClick={() => setOpen(true)} aria-label="Open background picker">
-        BG · {current ?? 'none'}
+        BG · {current ?? 'none'} {current ? (live ? '· live' : '· test') : ''}
       </Pill>
     )
   }
@@ -182,6 +205,7 @@ export default function BackgroundDebugPanel({ current }: { current: string | nu
     <Bar role="region" aria-label="Background picker">
       <Row>
         <Label>BG</Label>
+        {current && <Status $live={live}>{live ? 'Live' : 'Test'}</Status>}
         <Current>
           {current ?? 'none'}
           {index >= 0 && <span style={{ opacity: 0.55, fontWeight: 400 }}> · {index + 1}/{names.length}</span>}
@@ -190,11 +214,13 @@ export default function BackgroundDebugPanel({ current }: { current: string | nu
         <IconButton type="button" onClick={() => step(1)} aria-label="Next background">›</IconButton>
         <IconButton type="button" onClick={() => setOpen(false)} aria-label="Hide background picker">▾</IconButton>
       </Row>
+      <Note>{note ?? (live ? 'In the rotation everyone sees' : '')}</Note>
       <Strip ref={stripRef}>
         {names.map((name, i) => {
           const { webp, look } = resolveBackground(import.meta.env.BASE_URL, name)
           return [
-            i === variantStart && <Divider key="variants">variants</Divider>,
+            i === 0 && <Divider key="live">live</Divider>,
+            i === variantStart && <Divider key="variants">test only</Divider>,
             <Thumb key={name} type="button" $active={name === current} aria-pressed={name === current} onClick={() => pick(name)} title={name}>
               <img
                 src={webp}
