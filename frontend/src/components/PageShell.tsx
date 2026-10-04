@@ -1,5 +1,5 @@
 import styled from '@emotion/styled';
-import { Link, Outlet } from '@tanstack/react-router';
+import { Link, Outlet, useMatchRoute } from '@tanstack/react-router';
 import { lazy, Suspense } from 'react';
 import { useRotatingBackground } from '../hooks/useRotatingBackground';
 import { BackgroundLayer } from './BackgroundLayer';
@@ -34,14 +34,19 @@ const Nav = styled.nav`
   }
 `;
 
-/** Small links under the title: schedule and history. */
+/** Small links under the title: schedule, history and the film lists. */
 export function MainNav() {
+  const onList = useMatchRoute()({ to: '/lists/$listId' }) !== false;
   return (
     <Nav aria-label="Pages">
       <Link to="/" activeOptions={{ exact: true }}>
         Schedule
       </Link>
       <Link to="/history">History</Link>
+      {/* Each list page links to the other two. */}
+      <Link to="/lists/$listId" params={{ listId: 'ss-directors-2012' }} aria-current={onList ? 'page' : undefined}>
+        Lists
+      </Link>
     </Nav>
   );
 }

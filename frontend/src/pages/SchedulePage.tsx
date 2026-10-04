@@ -16,6 +16,7 @@ import {
 } from '../components/styled/Controls';
 import { ErrorMessage } from '../components/styled/Feedback';
 import { LoadingMessage } from '../components/LoadingMessage';
+import { NoMatches } from '../components/NoMatches';
 import { computeFilterResult } from '../filters/computeFilterResult';
 import { MOVIE_FILTERS } from '../filters/registry';
 import { MovieFilterState } from '../filters/types';
@@ -101,7 +102,19 @@ export default function SchedulePage() {
         </HeaderControls>
       </Header>
       {schedule ? (
-        <MovieSchedule index={movieIndex} filterResult={filterResult} listHits={listHits} />
+        <>
+          <MovieSchedule index={movieIndex} filterResult={filterResult} listHits={listHits} />
+          {filterResult.visibleMovieKeys.size === 0 && (
+            <NoMatches
+              query={deferredSearchQuery}
+              filters={MOVIE_FILTERS.filter((filter) => enabledFilterIds.has(filter.id)).map((filter) => filter.label)}
+              onClear={() => {
+                setSearchQuery('');
+                setEnabledFilterIds(new Set());
+              }}
+            />
+          )}
+        </>
       ) : (
         <LoadingMessage compact />
       )}

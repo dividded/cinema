@@ -46,9 +46,11 @@ export const FilterRow = styled.div`
 export const FilterToggle = styled.button<{ $active?: boolean }>`
   appearance: none;
   border: none;
-  background: transparent;
-  padding: 0.15rem 0 0.2rem;
-  margin: 0;
+  border-radius: 3px;
+  /* The padding is cancelled by the margin, so the text sits where it always did and
+     switching on only fills in the chip around it. */
+  padding: 0.15rem 0.4rem 0.2rem;
+  margin: 0 -0.4rem;
   cursor: pointer;
   flex: 0 0 auto;
   font-family: inherit;
@@ -56,16 +58,15 @@ export const FilterToggle = styled.button<{ $active?: boolean }>`
   font-weight: ${props => (props.$active === true ? 700 : 600)};
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--ink);
-  border-bottom: 1px solid ${props => (
-    props.$active === true ? 'var(--ink)' : 'rgba(26, 25, 22, 0.35)'
-  )};
-  transition: color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
+  color: ${props => (props.$active === true ? 'var(--bg-elevated)' : 'var(--ink)')};
+  background: ${props => (props.$active === true ? 'var(--ink)' : 'transparent')};
+  box-shadow: inset 0 -1px 0 ${props => (props.$active === true ? 'var(--ink)' : 'rgba(26, 25, 22, 0.35)')};
+  transition: color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
   opacity: ${props => (props.$active === true ? 1 : 0.78)};
 
   &:hover {
     opacity: 1;
-    border-bottom-color: var(--ink);
+    box-shadow: inset 0 -1px 0 var(--ink);
   }
 
   &:active {

@@ -6,6 +6,7 @@ import { DateSectionBlock } from '../components/MovieSchedule';
 import { MainNav } from '../components/PageShell';
 import { SearchContainer, SearchInput } from '../components/styled/Controls';
 import { LoadingMessage } from '../components/LoadingMessage';
+import { NoMatches } from '../components/NoMatches';
 import { Header, HeaderControls, MovieList, TitleBlock } from '../components/styled/Layout';
 import {
   fetchHistoryIndex,
@@ -170,7 +171,7 @@ function MonthSection({ data }: { data: HistoryMonth }) {
 
 const NO_COUNTS: ReadonlyMap<string, number> = new Map();
 
-function SearchResults({ query }: { query: string }) {
+function SearchResults({ query, onClear }: { query: string; onClear: () => void }) {
   const { data: screened, error } = useLoaded(fetchScreened);
   const today = getTodayInIsrael();
   const results = useMemo(() => {
@@ -192,7 +193,7 @@ function SearchResults({ query }: { query: string }) {
 
   if (error) return <Note>Couldn’t load the history.</Note>;
   if (!screened) return <LoadingMessage compact />;
-  if (results.length === 0) return <Note>No matches.</Note>;
+  if (results.length === 0) return <NoMatches query={query} filters={[]} onClear={onClear} />;
 
   return (
     <ResultList>
@@ -349,7 +350,12 @@ export default function HistoryPage() {
 
       <MovieList>
         {searching ? (
-          <SearchResults query={deferredQuery} />
+          <SearchResults
+            query={deferredQuery}
+            onClear={() => {
+              setQuery('');
+            }}
+          />
         ) : error ? (
           <Note>Couldn’t load the history.</Note>
         ) : !months ? (

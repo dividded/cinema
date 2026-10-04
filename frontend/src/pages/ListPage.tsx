@@ -5,6 +5,7 @@ import { BrandTitle } from '../components/BrandTitle';
 import { MainNav } from '../components/PageShell';
 import { FilterToggle, SearchContainer, SearchInput } from '../components/styled/Controls';
 import { LoadingMessage } from '../components/LoadingMessage';
+import { NoMatches } from '../components/NoMatches';
 import { Header, TitleBlock } from '../components/styled/Layout';
 import { fetchScreened, useLoaded } from '../hooks/useHistoryData';
 import { ScreenedMovie } from '../types/movie';
@@ -80,18 +81,12 @@ const OtherLists = styled.div`
 `;
 
 const Toolbar = styled.div`
-  position: sticky;
-  top: 0;
-  z-index: 5;
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
-  gap: 0.5rem 1.25rem;
-  padding: 0.65rem 0.85rem;
-  margin: 0 -0.85rem 0.25rem;
-  border-radius: 0 0 8px 8px;
-  background: color-mix(in srgb, var(--bg) 92%, transparent);
-  backdrop-filter: blur(6px);
+  gap: 0.85rem 1.25rem;
+  padding: 0.25rem 0 0.9rem;
+  margin-bottom: 0.25rem;
   border-bottom: 1px solid var(--line);
 `;
 
@@ -551,7 +546,7 @@ function ListPage({ list }: { list: ListInfo }) {
             />
           </SearchContainer>
           <FilterToggle type="button" $active={onlyScreened} aria-pressed={onlyScreened} onClick={() => { setOnlyScreened((v) => !v); }}>
-            At the cinematheque
+            Screening
           </FilterToggle>
         </Toolbar>
 
@@ -560,7 +555,14 @@ function ListPage({ list }: { list: ListInfo }) {
         ) : !films ? (
           <LoadingMessage compact />
         ) : visible.length === 0 ? (
-          <Note>No films match.</Note>
+          <NoMatches
+            query={deferredQuery}
+            filters={onlyScreened ? ['Screening'] : []}
+            onClear={() => {
+              setQuery('');
+              setOnlyScreened(false);
+            }}
+          />
         ) : (
           <>
             <Rows>
