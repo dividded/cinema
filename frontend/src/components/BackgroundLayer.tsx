@@ -13,17 +13,42 @@ const Hero = styled.div`
   pointer-events: none;
 `
 
-const Image = styled.img<{ $position: string; $mobilePosition: string; $opacity: number; $filter: string; $flip: boolean }>`
+/** Soft edges for a zoomed-out image, so it melts into the paper instead of ending in a line. */
+const FADE_BOTTOM = 'linear-gradient(to bottom, #000 62%, transparent)'
+const FADE_SIDES = 'linear-gradient(to right, transparent, #000 14%, #000 86%, transparent)'
+
+function zoomStyles(scale: number, sides: boolean): string {
+  if (scale >= 1) return 'width: 100%; height: 100%; margin-left: 0; mask-image: none; -webkit-mask-image: none;'
+  const width = sides ? scale * 100 : 100
+  const masks = sides ? `${FADE_SIDES}, ${FADE_BOTTOM}` : FADE_BOTTOM
+  return `
+    width: ${width}%;
+    height: ${scale * 100}%;
+    margin-left: ${(100 - width) / 2}%;
+    -webkit-mask-image: ${masks};
+    mask-image: ${masks};
+    -webkit-mask-composite: source-in;
+    mask-composite: intersect;
+  `
+}
+
+const Image = styled.img<{
+  $position: string
+  $mobilePosition: string
+  $scale: number
+  $mobileScale: number
+  $opacity: number
+  $filter: string
+}>`
   display: block;
-  width: 100%;
-  height: 100%;
+  ${(p) => zoomStyles(p.$scale, true)}
   object-fit: cover;
   object-position: ${(p) => p.$position};
   opacity: ${(p) => p.$opacity};
   filter: saturate(0.92) contrast(0.98) ${(p) => p.$filter};
-  transform: ${(p) => (p.$flip ? 'scaleX(-1)' : 'none')};
 
   @media (max-width: 768px) {
+    ${(p) => zoomStyles(p.$mobileScale, false)}
     object-position: ${(p) => p.$mobilePosition};
   }
 
@@ -90,9 +115,10 @@ function HeroImage({ background }: { background: ResolvedBackground }) {
           data-fade={state !== 'unknown' ? '' : undefined}
           $position={position}
           $mobilePosition={look.mobilePosition ?? position}
+          $scale={look.scale ?? 1}
+          $mobileScale={look.mobileScale ?? 1}
           $opacity={look.opacity ?? DEFAULT_OPACITY}
           $filter={look.filter ?? ''}
-          $flip={look.flip ?? false}
         />
       </picture>
       <Wash $strength={look.wash ?? 1} />

@@ -56,3 +56,5 @@ logs/
 
 # Cloudflare Worker local dev cache
 .wrangler/
+# Python
+__pycache__/

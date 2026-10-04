@@ -202,7 +202,6 @@ export default function BackgroundDebugPanel({ current }: { current: string | nu
                 loading="lazy"
                 style={{
                   objectPosition: look.mobilePosition ?? look.position,
-                  transform: look.flip ? 'scaleX(-1)' : undefined,
                   filter: look.filter,
                 }}
               />
