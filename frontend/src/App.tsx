@@ -1,112 +1,33 @@
-import { useDeferredValue, useMemo, useState } from 'react';
-import { Movie } from './types/movie';
-import { BackgroundLayer } from './components/BackgroundLayer';
-import { BrandTitle } from './components/BrandTitle';
-import { MovieSchedule } from './components/MovieSchedule';
-import {
-  Container,
-  Header,
-  HeaderControls,
-} from './components/styled/Layout';
-import {
-  SearchContainer,
-  SearchInput,
-  FilterRow,
-  FilterToggle,
-} from './components/styled/Controls';
-import {
-  LoadingMessage,
-  ErrorMessage
-} from './components/styled/Feedback';
-import { computeFilterResult } from './filters/computeFilterResult';
-import { MOVIE_FILTERS } from './filters/registry';
-import { MovieFilterState } from './filters/types';
-import { useMovieIndex } from './hooks/useMovieIndex';
-import { useRotatingBackground } from './hooks/useRotatingBackground';
-import { useSchedule } from './hooks/useSchedule';
+import { lazy, Suspense } from 'react';
+import { PageShell } from './components/PageShell';
+import { LoadingMessage } from './components/styled/Feedback';
+import { listById } from './lists/catalog';
+import SchedulePage from './pages/SchedulePage';
+import { useLocation } from './router';
 
-const NO_MOVIES: Movie[] = [];
-const NO_DATES: string[] = [];
+// The schedule is the landing page and ships in the main bundle; the others load on demand.
+const HistoryPage = lazy(() => import('./pages/HistoryPage'));
+const ListPage = lazy(() => import('./pages/ListPage'));
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
-function App() {
-  const { schedule, error } = useSchedule();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [enabledFilterIds, setEnabledFilterIds] = useState<ReadonlySet<string>>(
-    () => new Set(),
-  );
+function Page() {
+  const { path } = useLocation();
+  if (path === '/') return <SchedulePage />;
+  if (path === '/history') return <HistoryPage />;
 
-  const deferredSearchQuery = useDeferredValue(searchQuery);
-  const movieIndex = useMovieIndex(schedule?.movies ?? NO_MOVIES, schedule?.dates ?? NO_DATES);
-  const backgroundImage = useRotatingBackground();
+  const listMatch = /^\/lists\/([\w-]+)$/.exec(path);
+  const list = listMatch && listById(listMatch[1]);
+  if (list) return <ListPage key={list.id} list={list} />;
 
-  const filterState = useMemo<MovieFilterState>(
-    () => ({
-      searchQuery: deferredSearchQuery,
-      enabledFilterIds,
-    }),
-    [deferredSearchQuery, enabledFilterIds],
-  );
-
-  const filterResult = useMemo(
-    () => computeFilterResult(movieIndex.moviesByDate, filterState),
-    [movieIndex.moviesByDate, filterState],
-  );
-
-  const toggleFilter = (filterId: string) => {
-    setEnabledFilterIds((current) => {
-      const next = new Set(current);
-      if (next.has(filterId)) {
-        next.delete(filterId);
-      } else {
-        next.add(filterId);
-      }
-      return next;
-    });
-  };
-
-  if (error) return <ErrorMessage>Failed to load movies. Please try again later.</ErrorMessage>;
-
-  return (
-    <Container>
-      <BackgroundLayer image={backgroundImage} />
-      <Header>
-        <BrandTitle />
-        <HeaderControls>
-          <FilterRow>
-            {MOVIE_FILTERS.map((filter) => {
-              const active = enabledFilterIds.has(filter.id)
-              return (
-                <FilterToggle
-                  key={filter.id}
-                  type="button"
-                  $active={active}
-                  aria-pressed={active}
-                  onClick={() => toggleFilter(filter.id)}
-                >
-                  {filter.label}
-                </FilterToggle>
-              )
-            })}
-          </FilterRow>
-          <SearchContainer>
-            <SearchInput
-              type="search"
-              placeholder="Search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              autoComplete="off"
-              spellCheck={false}
-            />
-          </SearchContainer>
-        </HeaderControls>
-      </Header>
-      {schedule ? (
-        <MovieSchedule index={movieIndex} filterResult={filterResult} />
-      ) : (
-        <LoadingMessage compact />
-      )}
-    </Container>
-  );
+  return <NotFoundPage />;
 }
 
-export default App;
+export default function App() {
+  return (
+    <PageShell>
+      <Suspense fallback={<LoadingMessage compact />}>
+        <Page />
+      </Suspense>
+    </PageShell>
+  );
+}

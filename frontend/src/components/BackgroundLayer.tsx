@@ -1,5 +1,6 @@
 import styled from '@emotion/styled'
 import { useState } from 'react'
+import { DEFAULT_OPACITY, DEFAULT_POSITION, ResolvedBackground } from '../utils/backgroundLooks'
 
 const Hero = styled.div`
   position: absolute;
@@ -12,14 +13,19 @@ const Hero = styled.div`
   pointer-events: none;
 `
 
-const Image = styled.img`
+const Image = styled.img<{ $position: string; $mobilePosition: string; $opacity: number; $filter: string; $flip: boolean }>`
   display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center top;
-  opacity: 0.7;
-  filter: saturate(0.92) contrast(0.98);
+  object-position: ${(p) => p.$position};
+  opacity: ${(p) => p.$opacity};
+  filter: saturate(0.92) contrast(0.98) ${(p) => p.$filter};
+  transform: ${(p) => (p.$flip ? 'scaleX(-1)' : 'none')};
+
+  @media (max-width: 768px) {
+    object-position: ${(p) => p.$mobilePosition};
+  }
 
   /* Only images that arrive after first paint fade in; cached ones show instantly. */
   &[data-pending] {
@@ -30,47 +36,66 @@ const Image = styled.img`
   }
 `
 
-const Wash = styled.div`
+const WASH_STOPS: ReadonlyArray<[alpha: number, at: string]> = [
+  [0.35, '0%'],
+  [0.55, '45%'],
+  [0.92, '82%'],
+]
+
+/** Strength 1 is the original wash; higher values push every stop closer to opaque. */
+function washGradient(strength: number): string {
+  const stops = WASH_STOPS.map(([alpha, at]) => {
+    const a = Math.min(1, 1 - (1 - alpha) / strength)
+    return `rgba(230, 227, 220, ${a.toFixed(3)}) ${at}`
+  })
+  return `linear-gradient(180deg, ${stops.join(', ')}, var(--bg) 100%)`
+}
+
+const Wash = styled.div<{ $strength: number }>`
   position: absolute;
   inset: 0;
-  background:
-    linear-gradient(
-      180deg,
-      rgba(230, 227, 220, 0.35) 0%,
-      rgba(230, 227, 220, 0.55) 45%,
-      rgba(230, 227, 220, 0.92) 82%,
-      var(--bg) 100%
-    );
+  background: ${(p) => washGradient(p.$strength)};
 `
 
 interface BackgroundLayerProps {
-  image: { avif: string; webp: string } | null;
+  background: ResolvedBackground | null
 }
 
 /** Top-of-page hero only — scrolls away with the page (not fixed). */
-export function BackgroundLayer({ image }: BackgroundLayerProps) {
-  const [state, setState] = useState<'unknown' | 'pending' | 'loaded'>('unknown')
+export function BackgroundLayer({ background }: BackgroundLayerProps) {
+  if (!background) return null
+  // Keyed by name so switching backgrounds (debug picker) restarts the fade-in.
+  return <HeroImage key={background.name} background={background} />
+}
 
-  if (!image) return null
+function HeroImage({ background }: { background: ResolvedBackground }) {
+  const [state, setState] = useState<'unknown' | 'pending' | 'loaded'>('unknown')
+  const { look } = background
+  const position = look.position ?? DEFAULT_POSITION
 
   return (
     <Hero aria-hidden="true">
       <picture>
-        <source srcSet={image.avif} type="image/avif" />
+        <source srcSet={background.avif} type="image/avif" />
         <Image
           ref={(img) => {
             if (img && state === 'unknown') setState(img.complete ? 'loaded' : 'pending')
           }}
-          src={image.webp}
+          src={background.webp}
           alt=""
           decoding="async"
           fetchPriority="high"
           onLoad={() => setState('loaded')}
           data-pending={state === 'pending' ? '' : undefined}
           data-fade={state !== 'unknown' ? '' : undefined}
+          $position={position}
+          $mobilePosition={look.mobilePosition ?? position}
+          $opacity={look.opacity ?? DEFAULT_OPACITY}
+          $filter={look.filter ?? ''}
+          $flip={look.flip ?? false}
         />
       </picture>
-      <Wash />
+      <Wash $strength={look.wash ?? 1} />
     </Hero>
   )
 }

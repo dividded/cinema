@@ -19,6 +19,8 @@ import {
   MultiDateIndicator,
 } from './styled/Screening';
 import { FaExternalLinkAlt } from 'react-icons/fa';
+import { ListHit } from '../lists/match';
+import { ListBadges } from './ListBadges';
 
 interface MovieCardProps {
   movieKey: string;
@@ -26,6 +28,7 @@ interface MovieCardProps {
   isWeekend: boolean;
   isMorningOnly: boolean;
   movieDatesCount: { [title: string]: number };
+  listHits?: readonly ListHit[];
 }
 
 function MovieTitle({
@@ -92,7 +95,8 @@ export const MovieCard = memo(function MovieCard({
   movie,
   isWeekend,
   isMorningOnly,
-  movieDatesCount
+  movieDatesCount,
+  listHits,
 }: MovieCardProps) {
   const isOldMovie = movie.year ? movie.year < 2020 : false;
   const datesCount = movieDatesCount[movie.title];
@@ -122,6 +126,7 @@ export const MovieCard = memo(function MovieCard({
           <MetaSpacer aria-hidden="true" />
         )}
       </MovieMetadata>
+      {listHits && <ListBadges hits={listHits} />}
     </StyledMovieCard>
   );
 });

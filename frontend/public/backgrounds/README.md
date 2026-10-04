@@ -14,3 +14,6 @@ yarn optimize-background path/to/still.jpg [name]
 This resizes to 1600px wide and compresses heavily (typically 15–60 KB per file); the
 images are shown faded, so the extra compression isn't visible. Rebuild or restart the
 dev server afterwards.
+
+`variants/` holds re-cropped stills used only by the debug picker (`?debugbg`); they are not in the
+rotation. Variants that only change the framing or filters live in `src/utils/backgroundLooks.ts`.

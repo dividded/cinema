@@ -3,7 +3,9 @@ import { fileURLToPath } from 'node:url'
 import { defineConfig, loadEnv, type HtmlTagDescriptor, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { backgroundsPlugin } from './scripts/backgroundsPlugin'
+import { routesPlugin } from './scripts/routesPlugin'
 import { resolveApiOrigin, scheduleUrl } from './src/config/api'
+import { STATIC_ROUTES } from './src/lists/ids'
 
 const rootDir = path.dirname(fileURLToPath(import.meta.url))
 
@@ -64,6 +66,7 @@ export default defineConfig(({ mode }) => {
       react(),
       backgroundsPlugin(path.join(rootDir, 'public', 'backgrounds')),
       preloadsPlugin(scheduleUrl(apiOrigin)),
+      routesPlugin(STATIC_ROUTES),
       ...(mode === 'development' ? [cinemaPathAlias()] : []),
     ],
     base: mode === 'production' ? '/cinema/' : '/',

@@ -36,6 +36,15 @@ export const Header = styled.header`
   }
 `
 
+/** The title with the page links under it. */
+export const TitleBlock = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex: 0 1 auto;
+  min-width: 0;
+`
+
 export const Title = styled.h1`
   margin: 0;
   flex: 0 1 auto;

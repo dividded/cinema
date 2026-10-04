@@ -1,6 +1,7 @@
 import { memo, useMemo, useRef } from 'react';
 import { FilterResult, movieCardKey } from '../filters/types';
 import { useApplyScheduleVisibility } from '../hooks/useApplyScheduleVisibility';
+import { ListHitsByTitle } from '../hooks/useListHits';
 import { isDateWeekend, MovieIndex } from '../hooks/useMovieIndex';
 import { formatHebrewDate } from '../utils/dateTime';
 import { isMorningOnlyMovie } from '../utils/movies';
@@ -15,6 +16,7 @@ interface DateSectionBlockProps {
   movies: MovieIndex['moviesByDate'][string]['movies'] | undefined;
   isWeekend: boolean;
   movieDatesCount: MovieIndex['movieDatesCount'];
+  listHits: ListHitsByTitle;
 }
 
 const dateSectionPropsAreEqual = (
@@ -25,6 +27,7 @@ const dateSectionPropsAreEqual = (
   prev.isWeekend === next.isWeekend &&
   prev.movies === next.movies &&
   prev.movieDatesCount === next.movieDatesCount &&
+  prev.listHits === next.listHits &&
   prev.meta?.hasAnyMovies === next.meta?.hasAnyMovies &&
   prev.meta?.hasVisibleMovies === next.meta?.hasVisibleMovies &&
   prev.meta?.isMorningOnly === next.meta?.isMorningOnly;
@@ -35,6 +38,7 @@ const DateSectionBlock = memo(function DateSectionBlock({
   movies,
   isWeekend,
   movieDatesCount,
+  listHits,
 }: DateSectionBlockProps) {
   const hasAnyMovies = meta?.hasAnyMovies ?? Boolean(movies?.length);
   const hasVisibleMovies = meta?.hasVisibleMovies ?? hasAnyMovies;
@@ -55,6 +59,7 @@ const DateSectionBlock = memo(function DateSectionBlock({
             isWeekend={isWeekend}
             isMorningOnly={!isWeekend && isMorningOnlyMovie(movie)}
             movieDatesCount={movieDatesCount}
+            listHits={listHits[movie.title]}
           />
         ))
       ) : (
@@ -67,11 +72,15 @@ const DateSectionBlock = memo(function DateSectionBlock({
 interface MovieScheduleProps {
   index: MovieIndex;
   filterResult: FilterResult;
+  listHits: ListHitsByTitle;
 }
+
+export { DateSectionBlock };
 
 export const MovieSchedule = memo(function MovieSchedule({
   index,
   filterResult,
+  listHits,
 }: MovieScheduleProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const { moviesByDate, movieDatesCount, visibleDates } = index;
@@ -96,6 +105,7 @@ export const MovieSchedule = memo(function MovieSchedule({
           movies={moviesByDate[date]?.movies}
           isWeekend={weekendByDate[date]}
           movieDatesCount={movieDatesCount}
+          listHits={listHits}
         />
       ))}
     </MovieList>

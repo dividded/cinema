@@ -12,3 +12,6 @@ export function resolveApiOrigin(apiUrl: string | undefined, mode: string): stri
 
 export const scheduleUrl = (origin: string) => `${origin}/api/schedule`;
 export const legacyMoviesUrl = (origin: string) => `${origin}/api/movies/cinematheque`;
+export const historyUrl = (origin: string) => `${origin}/api/history`;
+export const historyMonthUrl = (origin: string, month: string) => `${origin}/api/history/${month}`;
+export const screenedUrl = (origin: string) => `${origin}/api/screened`;

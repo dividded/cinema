@@ -23,6 +23,6 @@ export function pickBackground(
 
 /** Each background ships as AVIF with a WebP fallback. */
 export function backgroundImageUrls(baseUrl: string, name: string) {
-  const root = `${baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`}backgrounds/${encodeURIComponent(name)}`
+  const root = `${baseUrl.endsWith('/') ? baseUrl : `${baseUrl}/`}backgrounds/${name.split('/').map(encodeURIComponent).join('/')}`
   return { avif: `${root}.avif`, webp: `${root}.webp` }
 }

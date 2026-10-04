@@ -24,8 +24,9 @@ export const MovieCard = styled.div<MovieCardProps>`
   padding: 0.8rem 0.1rem 0.8rem 0.65rem;
   display: flex;
   flex-direction: row;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 1rem;
+  gap: 0 1rem;
   border-left: 2px solid ${rowAccent};
 
   &::after {
@@ -44,7 +45,7 @@ export const MovieCard = styled.div<MovieCardProps>`
   }
 
   @media (max-width: 768px) {
-    gap: 0.65rem;
+    gap: 0 0.65rem;
     padding: 0.8rem 0.05rem 0.8rem 0.6rem;
 
     &::after {
@@ -132,7 +133,8 @@ export const MovieDuration = styled.span`
 
 export const MovieTitleContainer = styled.div`
   display: block;
-  flex: 1 1 auto;
+  /* Zero basis: a long title must shrink, never wrap the metadata onto its own line. */
+  flex: 1 1 0;
   min-width: 0;
   overflow: hidden;
   text-align: start;

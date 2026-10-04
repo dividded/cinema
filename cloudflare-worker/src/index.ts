@@ -38,6 +38,25 @@ interface Schedule {
   movies: Movie[];
 }
 
+/** One month of past days, for the history page (same shape as the schedule). */
+interface HistoryMonth {
+  month: string;
+  dates: string[];
+  movies: Movie[];
+}
+
+/** Months that have past days, newest first. */
+interface HistoryIndex {
+  updatedAt: string;
+  months: { month: string; days: number; movies: number }[];
+}
+
+/** Every movie ever stored (past and upcoming) with its screening times, for the list pages. */
+interface ScreenedIndex {
+  updatedAt: string;
+  movies: { title: string; altName?: string; year?: number; siteUrl?: string; screenings: string[] }[];
+}
+
 interface RefreshMeta {
   updatedAt: string;
   movieCount: number;
@@ -69,6 +88,9 @@ const keys = (env: Env) => ({
   month: (month: string) => `${env.MOVIES_KV_KEY}:month:${month}`,
   schedule: `${env.MOVIES_KV_KEY}:schedule`,
   meta: `${env.MOVIES_KV_KEY}:meta`,
+  monthPrefix: `${env.MOVIES_KV_KEY}:month:`,
+  history: `${env.MOVIES_KV_KEY}:history`,
+  screened: `${env.MOVIES_KV_KEY}:screened`,
   /** Single all-days store used before per-month storage; migrated on the next refresh. */
   legacyDays: `${env.MOVIES_KV_KEY}:days`,
 });
@@ -261,7 +283,93 @@ async function refreshMovies(env: Env): Promise<RefreshMeta> {
     env.MOVIES_KV.put(k.meta, JSON.stringify(meta)),
   ]);
   if (stores[MIGRATED]) await env.MOVIES_KV.delete(k.legacyDays);
+  await rebuildHistoryIndexes(env, stores);
   return meta;
+}
+
+/** Every month key in KV (KV lists at most 1000 keys per call, about 80 years of months). */
+async function listMonths(env: Env): Promise<string[]> {
+  const prefix = keys(env).monthPrefix;
+  const months: string[] = [];
+  let cursor: string | undefined;
+  do {
+    const page = await env.MOVIES_KV.list({ prefix, cursor });
+    months.push(...page.keys.map(key => key.name.slice(prefix.length)));
+    cursor = page.list_complete ? undefined : page.cursor;
+  } while (cursor);
+  return months.filter(month => /^\d{4}-\d{2}$/.test(month)).sort();
+}
+
+/** The past days (before today) of one stored month, merged into one movie per title. */
+function historyMonth(month: string, store: DayStore, today: string): HistoryMonth {
+  const dates = Object.keys(store)
+    .filter(date => date < today && store[date].movies.length > 0)
+    .sort()
+    .reverse();
+  return { month, dates, movies: mergeMovies(dates.flatMap(date => store[date].movies)) };
+}
+
+/**
+ * Rebuilds the history month list and the all-time screenings index from every stored month.
+ * Months already loaded by a refresh can be passed in to save reading them again.
+ */
+async function rebuildHistoryIndexes(
+  env: Env,
+  loaded: Record<string, DayStore> = {},
+): Promise<{ history: HistoryIndex; screened: ScreenedIndex }> {
+  const k = keys(env);
+  const months = [...new Set([...(await listMonths(env)), ...Object.keys(loaded)])].sort();
+  const stores = await Promise.all(
+    months.map(async month => loaded[month] ?? (await env.MOVIES_KV.get<DayStore>(k.month(month), 'json')) ?? {}),
+  );
+  const today = todayInIsrael();
+  const now = new Date().toISOString();
+
+  const history: HistoryIndex = { updatedAt: now, months: [] };
+  const byTitle = new Map<string, ScreenedIndex['movies'][number]>();
+  for (const [i, month] of months.entries()) {
+    const past = historyMonth(month, stores[i], today);
+    if (past.dates.length > 0) {
+      history.months.push({ month, days: past.dates.length, movies: past.movies.length });
+    }
+    for (const date of Object.keys(stores[i]).sort()) {
+      for (const movie of stores[i][date].movies) {
+        let entry = byTitle.get(movie.title);
+        if (!entry) {
+          entry = { title: movie.title, screenings: [] };
+          for (const field of ['altName', 'year', 'siteUrl'] as const) {
+            if (movie[field] != null) (entry as Record<string, unknown>)[field] = movie[field];
+          }
+          byTitle.set(movie.title, entry);
+        }
+        for (const screening of movie.screenings) {
+          if (!entry.screenings.includes(screening.dateTime)) entry.screenings.push(screening.dateTime);
+        }
+      }
+    }
+  }
+  history.months.reverse();
+  const screened: ScreenedIndex = { updatedAt: now, movies: [...byTitle.values()] };
+  for (const movie of screened.movies) movie.screenings.sort();
+
+  await Promise.all([
+    env.MOVIES_KV.put(k.history, JSON.stringify(history)),
+    env.MOVIES_KV.put(k.screened, JSON.stringify(screened)),
+  ]);
+  return { history, screened };
+}
+
+/** Serves a stored index, building it first if no refresh has written it yet. */
+async function handleHistoryIndex(request: Request, env: Env, which: 'history' | 'screened'): Promise<Response> {
+  const stored = await env.MOVIES_KV.get(keys(env)[which]);
+  const json = stored ?? JSON.stringify((await rebuildHistoryIndexes(env))[which]);
+  return cachedJsonResponse(request, json);
+}
+
+async function handleHistoryMonth(request: Request, env: Env, month: string): Promise<Response> {
+  const store = await env.MOVIES_KV.get<DayStore>(keys(env).month(month), 'json');
+  if (!store) return jsonResponse({ error: 'No data for this month' }, 404);
+  return cachedJsonResponse(request, JSON.stringify(historyMonth(month, store, todayInIsrael())));
 }
 
 async function handleSchedule(request: Request, env: Env): Promise<Response> {
@@ -319,6 +427,19 @@ export default {
       return meta
         ? new Response(meta, { headers: { ...CORS_HEADERS, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } })
         : jsonResponse({ error: 'Not refreshed by the worker yet' }, 503);
+    }
+
+    if (request.method === 'GET' && pathname === '/api/history') {
+      return handleHistoryIndex(request, env, 'history');
+    }
+
+    const monthMatch = /^\/api\/history\/(\d{4}-\d{2})$/.exec(pathname);
+    if (request.method === 'GET' && monthMatch) {
+      return handleHistoryMonth(request, env, monthMatch[1]);
+    }
+
+    if (request.method === 'GET' && pathname === '/api/screened') {
+      return handleHistoryIndex(request, env, 'screened');
     }
 
     if (request.method === 'POST' && pathname === '/api/refresh') {

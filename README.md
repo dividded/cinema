@@ -16,6 +16,10 @@ the next `FETCH_DAYS` (45) days and merges the per-day results into what it alre
 The backend is a stateless scraper; the worker is the only writer to KV.
 
 - `GET /api/schedule` returns `{ updatedAt, dates, movies }` (what the frontend uses).
+- `GET /api/history` lists the months that have past days, newest first; `GET /api/history/YYYY-MM` returns
+  that month's past days in the schedule's shape (for the `/history` page).
+- `GET /api/screened` returns every movie ever stored with all its screening times (for the list pages).
+  This and the month list are rebuilt on every refresh (or on first request after a deploy).
 - `GET /api/health` shows when the data was last refreshed, and which days failed.
 - `POST /api/refresh` triggers a refresh on demand (rate-limited to once per 5 minutes).
 
@@ -34,6 +38,20 @@ The page is built so everything needed for the first screen downloads in paralle
 - The last schedule is kept in `localStorage` and rendered immediately, then revalidated with an ETag.
 - A service worker (`public/sw.js`) serves the app from cache on repeat visits and updates it in the background,
   so a new deploy shows up on the visit after the first one following it.
+
+## Pages
+
+- `/` the schedule, `/history` past days (loaded a month at a time as you scroll, with search across all
+  of history).
+- `/lists/ss-directors-2012`, `/lists/ss-critics-2012`, `/lists/tspdt-1000`: the Sight & Sound 2012
+  directors' and critics' top 250 and They Shoot Pictures, Don't They?'s 1,000 Greatest Films, each film
+  linked to IMDb and to when the cinematheque screened it. Schedule and history cards get a badge (with the
+  rank) for each list a movie is on. The datasets are built by `frontend/scripts/lists/build-lists.py`
+  (sources and the matching rules are described there and in `src/lists/match.ts`; matching is strict:
+  same normalized title and a year within one).
+- GitHub Pages only serves files, so the build writes a copy of `index.html` for each route.
+- `?debugbg` on any page shows a background picker (`?debugbg=<name>` opens a specific one), including
+  debug-only variants of the stills (see `src/utils/backgroundLooks.ts`).
 
 For local development run the worker (`cd cloudflare-worker && yarn dev`, port 8787) and the frontend
 (`cd frontend && yarn dev`); set `VITE_API_URL` to point the frontend at another API.

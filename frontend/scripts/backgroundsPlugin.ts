@@ -34,8 +34,15 @@ export function backgroundsPlugin(backgroundsDir: string): Plugin {
   var names = ${JSON.stringify(names)};
   if (!names.length) return;
   var seededUnit = ${seededUnit.toString()};
-  var name = names[Math.floor(seededUnit(Math.floor(Date.now() / ${BACKGROUND_ROTATE_MS})) * names.length)];
+  window.__CINEMA_BACKGROUNDS__ = names;
+  // ?debugbg=<name> picks a background (variants are resolved by the app).
+  var debug = /[?&]debugbg=([^&]*)/.exec(location.search);
+  var wanted = debug && decodeURIComponent(debug[1]);
+  var name = wanted && names.indexOf(wanted) >= 0
+    ? wanted
+    : names[Math.floor(seededUnit(Math.floor(Date.now() / ${BACKGROUND_ROTATE_MS})) * names.length)];
   window.__CINEMA_BACKGROUND__ = name;
+  if (wanted && name !== wanted) return;
   var link = document.createElement('link');
   link.rel = 'preload';
   link.as = 'image';
