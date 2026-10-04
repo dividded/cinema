@@ -1,99 +1,75 @@
-import { Movie } from '../types/movie';
-import { isBeforeEvening, compareTimeStrings } from './dateTime';
+import { titleKey } from '../lists/match';
+import { Movie, Screening } from '../types/movie';
+import { compareTimeStrings, dateOf, dayOfWeek, isBeforeEvening, minutesOfDay, timeOf } from './dateTime';
 
-export interface MoviesByDate {
-  [date: string]: {
-    movies: Movie[];
-    isWeekend: boolean;
-    isMorningOnly: boolean;
-  }
+export interface DayGroup {
+  movies: Movie[];
+  isWeekend: boolean;
+  isMorningOnly: boolean;
 }
 
-export const isMorningOnlyMovie = (movie: Movie): boolean => {
-  if (movie.screenings.length === 0) return false;
-  
-  return movie.screenings.every(screening => {
-    const timeStr = screening.dateTime.split(' ')[1];
-    const [hours] = timeStr.split(':').map(Number);
-    return hours < 17;
-  });
+export type MoviesByDate = Partial<Record<string, DayGroup>>;
+
+export const isDateWeekend = (date: string): boolean => {
+  const day = dayOfWeek(date);
+  return day === 5 || day === 6;
 };
 
-export const getEarliestScreeningTime = (screenings: Movie['screenings']): string => {
-  return screenings
-    .map(s => s.dateTime.split(' ')[1])
-    .sort(compareTimeStrings)[0];
-};
+export const isMorningOnlyMovie = (movie: Movie): boolean =>
+  movie.screenings.length > 0 &&
+  movie.screenings.every((screening) => minutesOfDay(timeOf(screening.dateTime)) < 17 * 60);
 
-export const groupMoviesByDate = (movies: Movie[]): MoviesByDate => {
-  const grouped: MoviesByDate = {};
-  const movieIndexByDate = new Map<string, Map<string, Movie>>();
-  
-  movies.forEach(movie => {
-    movie.screenings.forEach(screening => {
-      const date = screening.dateTime.split(' ')[0];
-      const [year, month, day] = date.split('-').map(Number);
-      const fullDate = new Date(year, month - 1, day);
-      const dayOfWeek = fullDate.getDay();
-      const isWeekend = dayOfWeek === 5 || dayOfWeek === 6;
+const earliestTime = (screenings: readonly Screening[]): string =>
+  screenings.map((s) => timeOf(s.dateTime)).sort(compareTimeStrings)[0] ?? '';
 
-      if (!grouped[date]) {
-        grouped[date] = {
-          movies: [],
-          isWeekend,
-          isMorningOnly: true
-        };
-        movieIndexByDate.set(date, new Map());
-      }
-      
-      const movieIndexByTitle = movieIndexByDate.get(date)!;
-      const existingMovie = movieIndexByTitle.get(movie.title);
-      if (existingMovie) {
-        existingMovie.screenings.push(screening);
+/**
+ * Which film a schedule entry is. The cinematheque lists one film under several titles
+ * (a regular screening, a lecture, a festival slot: "הנסיכה מונונוקי | סינמטוקיו" and
+ * "אפטר בסינמטק | הנסיכה מונונוקי"), but they share the English title and year.
+ */
+export const filmKey = (movie: Pick<Movie, 'title' | 'altName' | 'year'>): string =>
+  movie.altName !== undefined && movie.altName !== ''
+    ? `${titleKey(movie.altName)}|${String(movie.year ?? '')}`
+    : `title|${movie.title}`;
+
+export const groupMoviesByDate = (movies: readonly Movie[]): MoviesByDate => {
+  const grouped: Record<string, DayGroup> = {};
+  const byDateAndTitle = new Map<string, Movie>();
+
+  for (const movie of movies) {
+    for (const screening of movie.screenings) {
+      const date = dateOf(screening.dateTime);
+      const group = (grouped[date] ??= { movies: [], isWeekend: isDateWeekend(date), isMorningOnly: true });
+
+      const key = `${date}|${movie.title}`;
+      const existing = byDateAndTitle.get(key);
+      if (existing) {
+        existing.screenings.push(screening);
       } else {
-        const entry = {
-          ...movie,
-          screenings: [screening]
-        };
-        movieIndexByTitle.set(movie.title, entry);
-        grouped[date].movies.push(entry);
+        const entry = { ...movie, screenings: [screening] };
+        byDateAndTitle.set(key, entry);
+        group.movies.push(entry);
       }
 
-      const time = screening.dateTime.split(' ')[1];
-      if (!isBeforeEvening(time)) {
-        grouped[date].isMorningOnly = false;
-      }
-    });
-  });
+      if (!isBeforeEvening(timeOf(screening.dateTime))) group.isMorningOnly = false;
+    }
+  }
 
   // Sort movies within each date by their earliest screening
-  Object.values(grouped).forEach(dateGroup => {
-    dateGroup.movies.sort((a, b) => {
-      const aTime = getEarliestScreeningTime(a.screenings);
-      const bTime = getEarliestScreeningTime(b.screenings);
-      return compareTimeStrings(aTime, bTime);
-    });
-  });
-
+  for (const group of Object.values(grouped)) {
+    group.movies.sort((a, b) => compareTimeStrings(earliestTime(a.screenings), earliestTime(b.screenings)));
+  }
   return grouped;
 };
 
-export const getMovieDatesCount = (movies: Movie[]): { [title: string]: number } => {
-  const datesByMovie: { [title: string]: Set<string> } = {};
-  
-  movies.forEach(movie => {
-    if (!datesByMovie[movie.title]) {
-      datesByMovie[movie.title] = new Set();
-    }
-    
-    movie.screenings.forEach(screening => {
-      const date = screening.dateTime.split(' ')[0];
-      datesByMovie[movie.title].add(date);
-    });
-  });
-
-  return Object.entries(datesByMovie).reduce((acc, [title, dates]) => {
-    acc[title] = dates.size;
-    return acc;
-  }, {} as { [title: string]: number });
+/** How many different dates each film screens on, by filmKey. */
+export const getMovieDatesCount = (movies: readonly Movie[]): ReadonlyMap<string, number> => {
+  const datesByFilm = new Map<string, Set<string>>();
+  for (const movie of movies) {
+    const key = filmKey(movie);
+    const dates = datesByFilm.get(key) ?? new Set<string>();
+    for (const screening of movie.screenings) dates.add(dateOf(screening.dateTime));
+    datesByFilm.set(key, dates);
+  }
+  return new Map([...datesByFilm].map(([key, dates]) => [key, dates.size]));
 };

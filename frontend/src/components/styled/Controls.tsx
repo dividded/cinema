@@ -53,15 +53,15 @@ export const FilterToggle = styled.button<{ $active?: boolean }>`
   flex: 0 0 auto;
   font-family: inherit;
   font-size: 0.92rem;
-  font-weight: ${props => (props.$active ? 700 : 600)};
+  font-weight: ${props => (props.$active === true ? 700 : 600)};
   letter-spacing: 0.04em;
   text-transform: uppercase;
   color: var(--ink);
   border-bottom: 1px solid ${props => (
-    props.$active ? 'var(--ink)' : 'rgba(26, 25, 22, 0.35)'
+    props.$active === true ? 'var(--ink)' : 'rgba(26, 25, 22, 0.35)'
   )};
   transition: color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
-  opacity: ${props => (props.$active ? 1 : 0.78)};
+  opacity: ${props => (props.$active === true ? 1 : 0.78)};
 
   &:hover {
     opacity: 1;

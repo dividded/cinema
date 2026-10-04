@@ -14,10 +14,8 @@ import {
   FilterRow,
   FilterToggle,
 } from '../components/styled/Controls';
-import {
-  LoadingMessage,
-  ErrorMessage
-} from '../components/styled/Feedback';
+import { ErrorMessage } from '../components/styled/Feedback';
+import { LoadingMessage } from '../components/LoadingMessage';
 import { computeFilterResult } from '../filters/computeFilterResult';
 import { MOVIE_FILTERS } from '../filters/registry';
 import { MovieFilterState } from '../filters/types';
@@ -83,7 +81,7 @@ export default function SchedulePage() {
                   type="button"
                   $active={active}
                   aria-pressed={active}
-                  onClick={() => toggleFilter(filter.id)}
+                  onClick={() => { toggleFilter(filter.id); }}
                 >
                   {filter.label}
                 </FilterToggle>
@@ -95,7 +93,7 @@ export default function SchedulePage() {
               type="search"
               placeholder="Search"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e) => { setSearchQuery(e.target.value); }}
               autoComplete="off"
               spellCheck={false}
             />

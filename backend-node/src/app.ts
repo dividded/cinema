@@ -23,13 +23,15 @@ app.use((req, res, next) => {
 });
 
 // Routes
-app.get('/api/movies/cinematheque', MovieController.getCinemathequeMovies);
-app.get('/api/movies/cinematheque/refresh', MovieController.forceRefreshCinemathequeMovies);
-app.get('/api/movies/cinematheque/days', MovieController.getCinemathequeDays);
+app.get('/api/movies/cinematheque', (req, res, next) => MovieController.getCinemathequeMovies(req, res, next));
+app.get('/api/movies/cinematheque/refresh', (req, res, next) =>
+  MovieController.forceRefreshCinemathequeMovies(req, res, next),
+);
+app.get('/api/movies/cinematheque/days', (req, res, next) => MovieController.getCinemathequeDays(req, res, next));
 
 // Start the server only if this script is run directly
 function startServer() {
-  const port = process.env.PORT || 3000;
+  const port = process.env.PORT ?? '3000';
   app.listen(port, () => {
     logger.info(`Server is running on port ${port}`);
   });

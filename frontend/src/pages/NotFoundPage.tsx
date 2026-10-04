@@ -2,7 +2,7 @@ import styled from '@emotion/styled';
 import { BrandTitle } from '../components/BrandTitle';
 import { MainNav } from '../components/PageShell';
 import { Header, TitleBlock } from '../components/styled/Layout';
-import { Link } from '../router';
+import { Link } from '@tanstack/react-router';
 
 const Message = styled.p`
   position: relative;

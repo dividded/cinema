@@ -1,5 +1,5 @@
 import { Movie } from '../types/movie';
-import { isBeforeEvening } from '../utils/dateTime';
+import { isBeforeEvening, timeOf } from '../utils/dateTime';
 import { MoviesByDate } from '../utils/movies';
 import { MOVIE_FILTERS } from './registry';
 import {
@@ -38,6 +38,7 @@ export const computeFilterResult = (
   const dateMeta: Record<string, DateFilterMeta> = {};
 
   for (const [date, group] of Object.entries(moviesByDate)) {
+    if (!group) continue;
     let hasVisibleMovies = false;
     let isMorningOnly = true;
 
@@ -48,10 +49,7 @@ export const computeFilterResult = (
       visibleMovieKeys.add(movieCardKey(date, movie.title));
 
       for (const screening of movie.screenings) {
-        const time = screening.dateTime.split(' ')[1];
-        if (!isBeforeEvening(time)) {
-          isMorningOnly = false;
-        }
+        if (!isBeforeEvening(timeOf(screening.dateTime))) isMorningOnly = false;
       }
     }
 

@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest';
 import { JSDOM } from 'jsdom';
 import fs from 'fs';
 import path from 'path';
@@ -27,8 +28,8 @@ describe('MovieParser', () => {
       expect(dearEvanHansen.screenings).not.toHaveLength(0);
       
       const firstScreening = dearEvanHansen.screenings[0];
-      expect(firstScreening.dateTime).toBeTruthy();
-      expect(firstScreening.venue).toBeTruthy();
+      expect(firstScreening?.dateTime).toBeTruthy();
+      expect(firstScreening?.venue).toBeTruthy();
     }
 
     // Verify no duplicate movies

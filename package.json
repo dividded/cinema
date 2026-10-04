@@ -7,7 +7,7 @@
     "dev": "concurrently \"yarn backend\" \"yarn frontend\""
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^10.0.5"
   },
   "dependencies": {}
 }

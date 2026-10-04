@@ -11,7 +11,7 @@ export const NoMoviesCard = styled.div<NoMoviesCardProps>`
   padding: 0.95rem 0.15rem 0.95rem 0.7rem;
   border: none;
   border-left: 2px solid ${props => (
-    props.isWeekend ? 'var(--weekend)' : 'transparent'
+    props.isWeekend === true ? 'var(--weekend)' : 'transparent'
   )};
   display: flex;
   align-items: center;
@@ -19,7 +19,7 @@ export const NoMoviesCard = styled.div<NoMoviesCardProps>`
   box-shadow: none;
   margin: 0;
   font-style: italic;
-  color: ${props => (props.isWeekend ? 'var(--weekend)' : 'var(--muted)')};
+  color: ${props => (props.isWeekend === true ? 'var(--weekend)' : 'var(--muted)')};
   font-family: 'Cormorant Garamond Variable', 'Cormorant Garamond', Georgia, serif;
   font-size: 1.05rem;
   text-align: left;

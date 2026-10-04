@@ -1,8 +1,8 @@
 import styled from '@emotion/styled';
 import { memo } from 'react';
-import { filmAnchor, listById, listPath } from '../lists/catalog';
+import { createLink } from '@tanstack/react-router';
+import { filmAnchor, listById, ListId } from '../lists/catalog';
 import { ListHit } from '../lists/match';
-import { Link } from '../router';
 
 /** A full-width row under the card, so three badges fit on one line even on phones. */
 const Row = styled.span`
@@ -15,7 +15,7 @@ const Row = styled.span`
   unicode-bidi: isolate;
 `;
 
-const Badge = styled(Link, { shouldForwardProp: (prop) => prop !== '$tone' })<{ $tone: 'gold' | 'plain' }>`
+const StyledBadge = styled.a<{ $tone: 'gold' | 'plain' }>`
   display: inline-flex;
   align-items: baseline;
   gap: 0.28rem;
@@ -78,7 +78,10 @@ const Badge = styled(Link, { shouldForwardProp: (prop) => prop !== '$tone' })<{ 
   }
 `;
 
-const SHORT_NAMES: Record<string, string> = {
+/** A router link styled as a badge (createLink keeps `to` and `params` type-checked). */
+const Badge = createLink(StyledBadge);
+
+const SHORT_NAMES: Record<ListId, string> = {
   'ss-directors-2012': 'S&S Dir',
   'ss-critics-2012': 'S&S Crit',
   'tspdt-1000': 'TSPDT',
@@ -89,12 +92,14 @@ export const ListBadges = memo(function ListBadges({ hits }: { hits: readonly Li
   return (
     <Row>
       {hits.map((hit) => {
-        const list = listById(hit.list)!;
+        const list = listById(hit.list);
         const tone = list.tone;
         return (
           <Badge
             key={hit.list}
-            to={`${listPath(list.id)}#${filmAnchor(hit.rank, hit.film.imdb)}`}
+            to="/lists/$listId"
+            params={{ listId: list.id }}
+            hash={filmAnchor(hit.rank, hit.film.imdb)}
             $tone={tone}
             title={`#${hit.rank} on ${list.title}`}
           >

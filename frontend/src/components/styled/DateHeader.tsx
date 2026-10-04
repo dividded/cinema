@@ -7,8 +7,8 @@ interface DateHeaderProps {
 
 export const DateHeader = styled.h3<DateHeaderProps>`
   color: ${props => {
-    if (props.isWeekend) return 'var(--weekend)';
-    if (props.isMorningOnly) return 'var(--morning)';
+    if (props.isWeekend === true) return 'var(--weekend)';
+    if (props.isMorningOnly === true) return 'var(--morning)';
     return 'var(--ink)';
   }};
   font-family: inherit;
@@ -19,8 +19,8 @@ export const DateHeader = styled.h3<DateHeaderProps>`
   margin: 0 0 0.35rem;
   padding: 0 0 0.5rem;
   border-bottom: 1px solid ${props => {
-    if (props.isWeekend) return 'var(--weekend-line)';
-    if (props.isMorningOnly) return 'var(--morning-line)';
+    if (props.isWeekend === true) return 'var(--weekend-line)';
+    if (props.isMorningOnly === true) return 'var(--morning-line)';
     return 'rgba(20, 20, 20, 0.14)';
   }};
 `

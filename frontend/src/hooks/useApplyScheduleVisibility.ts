@@ -18,13 +18,13 @@ export const useApplyScheduleVisibility = (
 
     container.querySelectorAll<HTMLElement>('[data-movie-key]').forEach((element) => {
       const key = element.dataset.movieKey;
-      const visible = Boolean(key && filterResult.visibleMovieKeys.has(key));
+      const visible = key !== undefined && filterResult.visibleMovieKeys.has(key);
       setElementFilteredVisibility(element, visible);
     });
 
     container.querySelectorAll<HTMLElement>('[data-date-section]').forEach((section) => {
       const date = section.dataset.dateSection;
-      if (!date) return;
+      if (date === undefined) return;
 
       const meta = filterResult.dateMeta[date];
       if (!meta) {

@@ -1,30 +1,26 @@
 import { useEffect, useState } from 'react';
-import { legacyMoviesUrl, resolveApiOrigin, scheduleUrl } from '../config/api';
-import { Movie } from '../types/movie';
-import { getTodayInIsrael } from '../utils/dateTime';
+import { scheduleUrl } from '../config/api';
+import { API_ORIGIN } from '../config/origin';
+import { Schedule, ScheduleSchema } from '../types/movie';
 
-/** Every movie plus the dates the API actually has data for (unfetched dates are absent). */
-export interface Schedule {
-  updatedAt: string | null;
-  dates: string[];
-  movies: Movie[];
-}
-
-const API_ORIGIN = resolveApiOrigin(import.meta.env.VITE_API_URL, import.meta.env.MODE);
 const STORAGE_KEY = 'cinema:schedule:v1';
 
-const isSchedule = (value: unknown): value is Schedule =>
-  typeof value === 'object' &&
-  value !== null &&
-  Array.isArray((value as Schedule).dates) &&
-  Array.isArray((value as Schedule).movies);
+/** Parses schedule JSON, or null if it isn't a valid schedule. */
+function parseSchedule(text: string): Schedule | null {
+  try {
+    const parsed = ScheduleSchema.safeParse(JSON.parse(text));
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
 
 function readCachedSchedule(): { text: string; schedule: Schedule } | null {
   try {
     const text = localStorage.getItem(STORAGE_KEY);
-    if (!text) return null;
-    const schedule: unknown = JSON.parse(text);
-    return isSchedule(schedule) ? { text, schedule } : null;
+    if (text === null) return null;
+    const schedule = parseSchedule(text);
+    return schedule ? { text, schedule } : null;
   } catch {
     return null;
   }
@@ -38,30 +34,17 @@ function writeCachedSchedule(text: string): void {
   }
 }
 
-/** Older APIs only serve the movie list; assume every day up to the last screening was fetched. */
-function scheduleFromMovies(movies: Movie[]): Schedule {
-  const screeningDates = movies.flatMap((m) => m.screenings.map((s) => s.dateTime.slice(0, 10)));
-  const lastDate = screeningDates.sort().at(-1);
-  const dates: string[] = [];
-  if (lastDate) {
-    const [year, month, day] = getTodayInIsrael().split('-').map(Number);
-    for (let i = 0; ; i++) {
-      const date = new Date(Date.UTC(year, month - 1, day + i)).toISOString().slice(0, 10);
-      if (date > lastDate) break;
-      dates.push(date);
-    }
-  }
-  return { updatedAt: null, dates, movies };
-}
-
 async function fetchScheduleText(): Promise<string> {
   // Matches the <link rel="preload"> in index.html, so this reuses that in-flight request.
   const response = await fetch(scheduleUrl(API_ORIGIN));
-  if (response.ok) return response.text();
+  if (!response.ok) throw new Error(`Schedule request failed with status ${response.status}`);
+  return response.text();
+}
 
-  const legacy = await fetch(legacyMoviesUrl(API_ORIGIN));
-  if (!legacy.ok) throw new Error(`HTTP error! status: ${legacy.status}`);
-  return JSON.stringify(scheduleFromMovies(await legacy.json()));
+interface ScheduleState {
+  schedule: Schedule | null;
+  text: string | null;
+  error: boolean;
 }
 
 /**
@@ -69,7 +52,7 @@ async function fetchScheduleText(): Promise<string> {
  * in the background and re-renders only if the data actually changed.
  */
 export function useSchedule(): { schedule: Schedule | null; error: boolean } {
-  const [state, setState] = useState(() => {
+  const [state, setState] = useState((): ScheduleState => {
     const cached = readCachedSchedule();
     return { schedule: cached?.schedule ?? null, text: cached?.text ?? null, error: false };
   });
@@ -79,12 +62,13 @@ export function useSchedule(): { schedule: Schedule | null; error: boolean } {
 
     fetchScheduleText()
       .then((text) => {
-        const schedule: unknown = JSON.parse(text);
-        if (cancelled || !isSchedule(schedule)) return;
+        const schedule = parseSchedule(text);
+        if (cancelled) return;
+        if (!schedule) throw new Error('The schedule has an unexpected shape');
         writeCachedSchedule(text);
         setState((current) => (current.text === text ? current : { schedule, text, error: false }));
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         console.error('Error fetching movies:', err);
         if (!cancelled) setState((current) => (current.schedule ? current : { ...current, error: true }));
       });

@@ -1,10 +1,10 @@
-import { memo, useMemo, useRef } from 'react';
+import { memo, useRef } from 'react';
 import { FilterResult, movieCardKey } from '../filters/types';
 import { useApplyScheduleVisibility } from '../hooks/useApplyScheduleVisibility';
 import { ListHitsByTitle } from '../hooks/useListHits';
-import { isDateWeekend, MovieIndex } from '../hooks/useMovieIndex';
+import { MovieIndex } from '../hooks/useMovieIndex';
 import { formatHebrewDate } from '../utils/dateTime';
-import { isMorningOnlyMovie } from '../utils/movies';
+import { DayGroup, isDateWeekend, isMorningOnlyMovie } from '../utils/movies';
 import { MovieCard } from './MovieCard';
 import { NoMoviesCard } from './NoMoviesCard';
 import { DateHeader } from './styled/DateHeader';
@@ -13,7 +13,7 @@ import { DateSection, MovieList } from './styled/Layout';
 interface DateSectionBlockProps {
   date: string;
   meta: FilterResult['dateMeta'][string] | undefined;
-  movies: MovieIndex['moviesByDate'][string]['movies'] | undefined;
+  movies: DayGroup['movies'] | undefined;
   isWeekend: boolean;
   movieDatesCount: MovieIndex['movieDatesCount'];
   listHits: ListHitsByTitle;
@@ -51,7 +51,7 @@ const DateSectionBlock = memo(function DateSectionBlock({
         {formatHebrewDate(date)}
       </DateHeader>
       {hasAnyMovies ? (
-        movies!.map((movie) => (
+        (movies ?? []).map((movie) => (
           <MovieCard
             key={movieCardKey(date, movie.title)}
             movieKey={movieCardKey(date, movie.title)}
@@ -63,7 +63,7 @@ const DateSectionBlock = memo(function DateSectionBlock({
           />
         ))
       ) : (
-        <NoMoviesCard date={date} isWeekend={isWeekend} />
+        <NoMoviesCard isWeekend={isWeekend} />
       )}
     </DateSection>
   );
@@ -87,14 +87,6 @@ export const MovieSchedule = memo(function MovieSchedule({
 
   useApplyScheduleVisibility(listRef, filterResult);
 
-  const weekendByDate = useMemo(() => {
-    const weekends: Record<string, boolean> = {};
-    for (const date of visibleDates) {
-      weekends[date] = isDateWeekend(date);
-    }
-    return weekends;
-  }, [visibleDates]);
-
   return (
     <MovieList ref={listRef}>
       {visibleDates.map((date) => (
@@ -103,7 +95,7 @@ export const MovieSchedule = memo(function MovieSchedule({
           date={date}
           meta={filterResult.dateMeta[date]}
           movies={moviesByDate[date]?.movies}
-          isWeekend={weekendByDate[date]}
+          isWeekend={isDateWeekend(date)}
           movieDatesCount={movieDatesCount}
           listHits={listHits}
         />

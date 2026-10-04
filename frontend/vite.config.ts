@@ -16,9 +16,9 @@ const cinemaPathAlias = (): Plugin => ({
   name: 'cinema-path-alias',
   configureServer(server) {
     server.middlewares.use((req, _res, next) => {
-      const url = (req as { url?: string }).url ?? '/'
+      const url = req.url ?? '/'
       if (url === '/cinema' || url.startsWith('/cinema/')) {
-        (req as { url?: string }).url = url.replace(/^\/cinema\/?/, '/') || '/'
+        req.url = url.replace(/^\/cinema\/?/, '/')
       }
       next()
     })
@@ -64,7 +64,7 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       react(),
-      backgroundsPlugin(path.join(rootDir, 'public', 'backgrounds')),
+      backgroundsPlugin(),
       preloadsPlugin(scheduleUrl(apiOrigin)),
       routesPlugin(STATIC_ROUTES),
       ...(mode === 'development' ? [cinemaPathAlias()] : []),

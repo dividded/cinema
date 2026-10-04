@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest';
 import { getTodayInIsrael, getUpcomingDates } from '../../utils/dates';
 
 describe('dates', () => {

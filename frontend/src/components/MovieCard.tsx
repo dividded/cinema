@@ -21,13 +21,15 @@ import {
 import { FaExternalLinkAlt } from 'react-icons/fa';
 import { ListHit } from '../lists/match';
 import { ListBadges } from './ListBadges';
+import { filmKey } from '../utils/movies';
+import { timeOf } from '../utils/dateTime';
 
 interface MovieCardProps {
   movieKey: string;
   movie: Movie;
   isWeekend: boolean;
   isMorningOnly: boolean;
-  movieDatesCount: { [title: string]: number };
+  movieDatesCount: ReadonlyMap<string, number>;
   listHits?: readonly ListHit[];
 }
 
@@ -40,7 +42,7 @@ function MovieTitle({
 }) {
   return (
     <MovieTitleText isOldMovie={isOldMovie}>
-      {movie.altName && movie.title !== movie.altName ? (
+      {movie.altName !== undefined && movie.altName !== '' && movie.title !== movie.altName ? (
         <>
           {movie.altName}
           <OriginalTitle isOldMovie={isOldMovie}>{movie.title}</OriginalTitle>
@@ -68,10 +70,10 @@ function Screenings({
       )}
       {movie.screenings.slice(0, 2).map((screening, index) => (
         <ScreeningItem key={`${idPrefix}-${index}`}>
-          <DateTime>{screening.dateTime.split(' ')[1]}</DateTime>
+          <DateTime>{timeOf(screening.dateTime)}</DateTime>
           <Venue>{screening.venue === 'Cinematheque TLV' ? 'TLV' : screening.venue}</Venue>
-          {screening.language && <Venue>· {screening.language}</Venue>}
-          {screening.subtitles && <Venue>· {screening.subtitles}</Venue>}
+          {screening.language !== undefined && screening.language !== '' && <Venue>· {screening.language}</Venue>}
+          {screening.subtitles !== undefined && screening.subtitles !== '' && <Venue>· {screening.subtitles}</Venue>}
         </ScreeningItem>
       ))}
     </ScreeningsList>
@@ -98,8 +100,9 @@ export const MovieCard = memo(function MovieCard({
   movieDatesCount,
   listHits,
 }: MovieCardProps) {
-  const isOldMovie = movie.year ? movie.year < 2020 : false;
-  const datesCount = movieDatesCount[movie.title];
+  const isOldMovie = movie.year !== undefined && movie.year < 2020;
+  const datesCount = movieDatesCount.get(filmKey(movie)) ?? 1;
+  const { siteUrl } = movie;
 
   return (
     <StyledMovieCard
@@ -114,12 +117,16 @@ export const MovieCard = memo(function MovieCard({
 
       <MovieMetadata>
         <Screenings movie={movie} datesCount={datesCount} idPrefix={movie.title} />
-        {movie.durationMinutes && (
+        {movie.durationMinutes !== undefined && movie.durationMinutes > 0 && (
           <MovieDuration>{movie.durationMinutes}min</MovieDuration>
         )}
         <YearCell year={movie.year} isOldMovie={isOldMovie} />
-        {movie.siteUrl ? (
-          <LinkButton onClick={() => window.open(movie.siteUrl, '_blank')}>
+        {siteUrl !== undefined && siteUrl !== '' ? (
+          <LinkButton
+            onClick={() => {
+              window.open(siteUrl, '_blank');
+            }}
+          >
             <FaExternalLinkAlt />
           </LinkButton>
         ) : (

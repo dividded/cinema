@@ -7,9 +7,9 @@ interface MovieCardProps {
 }
 
 function rowAccent(props: MovieCardProps): string {
-  if (props.isOldMovie) return 'var(--classic-line)'
-  if (props.isWeekend) return 'var(--weekend)'
-  if (props.isMorningOnly) return 'var(--morning)'
+  if (props.isOldMovie === true) return 'var(--classic-line)'
+  if (props.isWeekend === true) return 'var(--weekend)'
+  if (props.isMorningOnly === true) return 'var(--morning)'
   return 'transparent'
 }
 
@@ -89,7 +89,7 @@ export const OriginalTitle = styled('span', {
 })<{ isOldMovie?: boolean }>`
   display: block;
   font-size: 0.8rem;
-  color: ${props => (props.isOldMovie ? '#6e5a14' : 'var(--muted)')};
+  color: ${props => (props.isOldMovie === true ? '#6e5a14' : 'var(--muted)')};
   margin-top: 0.15rem;
   font-weight: 400;
   text-align: start;
@@ -110,15 +110,15 @@ export const MovieYear = styled('span', {
   font-size: 0.92rem;
   line-height: 1.2;
   color: ${props => {
-    if (props.isUnknown) return 'var(--muted)'
+    if (props.isUnknown === true) return 'var(--muted)'
     if (props.isOldMovie) return 'var(--classic)'
     return 'var(--ink-soft)'
   }};
-  font-weight: ${props => (props.isOldMovie && !props.isUnknown ? 700 : 600)};
+  font-weight: ${props => (props.isOldMovie && props.isUnknown !== true ? 700 : 600)};
   letter-spacing: 0.01em;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
-  opacity: ${props => (props.isUnknown ? 0.65 : 1)};
+  opacity: ${props => (props.isUnknown === true ? 0.65 : 1)};
 `
 
 export const MovieDuration = styled.span`

@@ -1,6 +1,6 @@
 # Background images
 
-One still is picked from a hash of the current **UTC minute**, once per page load, by an
+One still (from the list in `src/backgrounds.ts`) is picked from a hash of the current **UTC minute**, once per page load, by an
 inline script in `index.html` (see `scripts/backgroundsPlugin.ts`). That script also
 preloads the image so it arrives together with the page.
 
@@ -15,5 +15,6 @@ This resizes to 1600px wide and compresses heavily (typically 15–60 KB per fil
 images are shown faded, so the extra compression isn't visible. Rebuild or restart the
 dev server afterwards.
 
-Per-background framing (a focal point for phones, zooming out) lives in
-`src/utils/backgroundLooks.ts`, along with the debug-only variants shown by `?debugbg`.
+Each image must also be listed in `src/backgrounds.ts` (with the film, director and year shown in the
+credit at the bottom of the page, and its framing on wide screens and phones); a test checks that the
+list and the files match.

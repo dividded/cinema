@@ -6,13 +6,19 @@ import { getUpcomingDates } from '../utils/dates';
 
 const logger = createLogger('MovieController');
 
+/** A positive integer from the environment, or the default when unset or invalid. */
+function envInt(name: string, fallback: number): number {
+  const value = parseInt(process.env[name] ?? '', 10);
+  return Number.isFinite(value) && value > 0 ? value : fallback;
+}
+
 // Configuration - all values can be overridden via environment variables
-const NUMBER_OF_DAYS_TO_FETCH = parseInt(process.env.MOVIE_FETCH_DAYS || '45', 10);
+const NUMBER_OF_DAYS_TO_FETCH = envInt('MOVIE_FETCH_DAYS', 45);
 const MAX_DAYS_TO_FETCH = 60;
-const BATCH_SIZE = parseInt(process.env.BATCH_SIZE || '3', 10);
-const MIN_BATCH_DELAY_MS = parseInt(process.env.BATCH_MIN_DELAY_MS || '500', 10);
-const MAX_BATCH_DELAY_MS = parseInt(process.env.BATCH_MAX_DELAY_MS || '1500', 10);
-const FETCH_TIMEOUT_MS = parseInt(process.env.FETCH_TIMEOUT_MS || '30000', 10);
+const BATCH_SIZE = envInt('BATCH_SIZE', 3);
+const MIN_BATCH_DELAY_MS = envInt('BATCH_MIN_DELAY_MS', 500);
+const MAX_BATCH_DELAY_MS = envInt('BATCH_MAX_DELAY_MS', 1500);
+const FETCH_TIMEOUT_MS = envInt('FETCH_TIMEOUT_MS', 30000);
 
 const fetcher = new BatchedFetcher({
   batchSize: BATCH_SIZE,
@@ -33,13 +39,27 @@ const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 let memoryCache: { movies: Movie[]; expiresAt: number } | null = null;
 
+const asError = (error: unknown): Error => (error instanceof Error ? error : new Error(String(error)));
+
+async function fetchAndCacheMovies(): Promise<Movie[]> {
+  logger.info(`Fetching movies for next ${NUMBER_OF_DAYS_TO_FETCH} days...`);
+  const movies = await fetcher.fetchMoviesForDates(getUpcomingDates(NUMBER_OF_DAYS_TO_FETCH));
+
+  if (movies.length > 0) {
+    memoryCache = { movies, expiresAt: Date.now() + CACHE_TTL_MS };
+  } else {
+    logger.warn('Fetched no movies; not caching the result.');
+  }
+  return movies;
+}
+
 /**
  * The backend is a stateless scraper: the Cloudflare Worker calls `/days`, merges the
  * per-day results with what it already has and is the only writer to KV. The movie-list
  * endpoints remain for local development.
  */
-export class MovieController {
-  static async getCinemathequeMovies(req: Request, res: Response, next: NextFunction) {
+export const MovieController = {
+  async getCinemathequeMovies(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       if (memoryCache && Date.now() < memoryCache.expiresAt) {
         logger.info('Cache hit! Returning cached movies.');
@@ -48,49 +68,38 @@ export class MovieController {
       }
 
       logger.info('Cache miss. Fetching fresh movies...');
-      res.json(await MovieController._fetchAndCacheMovies());
-    } catch (error: any) {
-      logger.errorWithStack('Error in getCinemathequeMovies:', error instanceof Error ? error : new Error(String(error)));
+      res.json(await fetchAndCacheMovies());
+    } catch (error: unknown) {
+      logger.errorWithStack('Error in getCinemathequeMovies:', asError(error));
       next(error);
     }
-  }
+  },
 
-  static async forceRefreshCinemathequeMovies(req: Request, res: Response, next: NextFunction) {
+  async forceRefreshCinemathequeMovies(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       logger.info('Forcing refresh of cinematheque movies...');
-      res.json(await MovieController._fetchAndCacheMovies());
-    } catch (error: any) {
-      logger.errorWithStack('Error in forceRefreshCinemathequeMovies:', error instanceof Error ? error : new Error(String(error)));
+      res.json(await fetchAndCacheMovies());
+    } catch (error: unknown) {
+      logger.errorWithStack('Error in forceRefreshCinemathequeMovies:', asError(error));
       next(error);
     }
-  }
+  },
 
   /** Scrapes each upcoming day and reports per-day success, so failed days can keep old data. */
-  static async getCinemathequeDays(req: Request, res: Response, next: NextFunction) {
+  async getCinemathequeDays(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const requestedDays = parseInt(String(req.query.days ?? ''), 10) || NUMBER_OF_DAYS_TO_FETCH;
-      const numberOfDays = Math.min(Math.max(requestedDays, 1), MAX_DAYS_TO_FETCH);
+      const daysParam = typeof req.query.days === 'string' ? parseInt(req.query.days, 10) : NaN;
+      const requestedDays = Number.isFinite(daysParam) && daysParam > 0 ? daysParam : NUMBER_OF_DAYS_TO_FETCH;
+      const numberOfDays = Math.min(requestedDays, MAX_DAYS_TO_FETCH);
 
       logger.info(`Fetching per-day schedule for next ${numberOfDays} days...`);
       const days = await fetcher.fetchDays(getUpcomingDates(numberOfDays));
 
       res.set('Cache-Control', 'no-store');
       res.json({ fetchedAt: new Date().toISOString(), days });
-    } catch (error: any) {
-      logger.errorWithStack('Error in getCinemathequeDays:', error instanceof Error ? error : new Error(String(error)));
+    } catch (error: unknown) {
+      logger.errorWithStack('Error in getCinemathequeDays:', asError(error));
       next(error);
     }
-  }
-
-  private static async _fetchAndCacheMovies(): Promise<Movie[]> {
-    logger.info(`Fetching movies for next ${NUMBER_OF_DAYS_TO_FETCH} days...`);
-    const movies = await fetcher.fetchMoviesForDates(getUpcomingDates(NUMBER_OF_DAYS_TO_FETCH));
-
-    if (movies.length > 0) {
-      memoryCache = { movies, expiresAt: Date.now() + CACHE_TTL_MS };
-    } else {
-      logger.warn('Fetched no movies; not caching the result.');
-    }
-    return movies;
-  }
-}
+  },
+};

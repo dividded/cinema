@@ -1,23 +1,15 @@
 import js from '@eslint/js'
-import { defineConfig } from 'eslint/config'
 import globals from 'globals'
-import reactHooks from 'eslint-plugin-react-hooks'
-import reactRefresh from 'eslint-plugin-react-refresh'
+import { defineConfig } from 'eslint/config'
 import tseslint from 'typescript-eslint'
 
 export default defineConfig(
-  { ignores: ['dist', 'public/sw.js', 'eslint.config.js'] },
+  { ignores: ['dist'] },
   {
-    extends: [
-      js.configs.recommended,
-      tseslint.configs.strictTypeChecked,
-      tseslint.configs.stylisticTypeChecked,
-      reactHooks.configs.flat.recommended,
-      reactRefresh.configs.vite,
-    ],
-    files: ['**/*.{ts,tsx}'],
+    extends: [js.configs.recommended, tseslint.configs.strictTypeChecked, tseslint.configs.stylisticTypeChecked],
+    files: ['**/*.ts'],
     languageOptions: {
-      globals: globals.browser,
+      globals: globals.node,
       parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
     },
     rules: {
@@ -28,11 +20,6 @@ export default defineConfig(
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
       // Numbers always stringify predictably; everything else must be converted explicitly.
       '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
-      // The router signals a missing page by throwing its notFound() value.
-      '@typescript-eslint/only-throw-error': [
-        'error',
-        { allow: [{ from: 'package', package: '@tanstack/router-core', name: 'NotFoundError' }] },
-      ],
       eqeqeq: ['error', 'always', { null: 'ignore' }],
     },
   },

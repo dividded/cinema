@@ -9,7 +9,7 @@ import {
 
 export interface MovieIndex {
   moviesByDate: MoviesByDate;
-  movieDatesCount: Record<string, number>;
+  movieDatesCount: ReadonlyMap<string, number>;
   visibleDates: string[];
 }
 
@@ -23,7 +23,7 @@ function datesToShow(dates: string[], moviesByDate: MoviesByDate): string[] {
   let emptyRun: string[] = [];
 
   for (const date of dates) {
-    if (!moviesByDate[date]?.movies.length) {
+    if ((moviesByDate[date]?.movies.length ?? 0) === 0) {
       emptyRun.push(date);
       continue;
     }
@@ -33,12 +33,6 @@ function datesToShow(dates: string[], moviesByDate: MoviesByDate): string[] {
   }
   return shown;
 }
-
-export const isDateWeekend = (date: string): boolean => {
-  const [year, month, day] = date.split('-').map(Number);
-  const dayOfWeek = new Date(year, month - 1, day).getDay();
-  return dayOfWeek === 5 || dayOfWeek === 6;
-};
 
 /**
  * @param fetchedDates Dates the API has data for. Only these can be shown, so a day that

@@ -1,25 +1,30 @@
-import type { ListId } from './ids';
+import { z } from 'zod';
+import { LIST_IDS, type ListId } from './ids';
 
 export type { ListId };
 
-/** A film on one of the lists (see scripts/lists/build-lists.py, which writes src/data/lists/). */
-export interface ListFilm {
-  rank: number;
-  /** English title where known, else the list's own. */
-  title: string;
-  year: number | null;
-  director: string;
-  imdb?: string;
-  /** Hebrew title (from Wikidata). */
-  he?: string;
-  /** Original-language title, when it differs from `title`. */
-  original?: string;
-  /** Other titles (the list's own, the original, alternates and aliases), for matching only. */
-  aka?: string[];
-  votes?: number;
-  country?: string;
-}
+export const ListIdSchema = z.enum(LIST_IDS);
 
+/** A film on one of the lists (see scripts/lists/build-lists.py, which writes src/data/lists/). */
+export const ListFilmSchema = z.object({
+  rank: z.number(),
+  /** English title where known, else the list's own. */
+  title: z.string(),
+  year: z.number().nullable(),
+  director: z.string(),
+  imdb: z.string().optional(),
+  /** Hebrew title (from Wikidata). */
+  he: z.string().optional(),
+  /** Original-language title, when it differs from `title`. */
+  original: z.string().optional(),
+  /** Other titles (the list's own, the original, alternates and aliases), for matching only. */
+  aka: z.array(z.string()).optional(),
+  votes: z.number().optional(),
+  country: z.string().optional(),
+});
+export type ListFilm = z.infer<typeof ListFilmSchema>;
+
+const parseFilms = (data: unknown): ListFilm[] => z.array(ListFilmSchema).parse(data);
 
 export interface ListInfo {
   id: ListId;
@@ -32,12 +37,13 @@ export interface ListInfo {
   source: { label: string; url: string };
   /** Badge style; the Sight & Sound lists are the more festive ones. */
   tone: 'gold' | 'plain';
+  /** The list's nominal length; a tie straddling it is listed separately. */
+  size: number;
   load: () => Promise<ListFilm[]>;
 }
 
-// In badge priority order.
-export const LISTS: readonly ListInfo[] = [
-  {
+export const LIST_INFO: Record<ListId, ListInfo> = {
+  'ss-directors-2012': {
     id: 'ss-directors-2012',
     badge: 'S&S Directors',
     shortName: 'S&S 2012 Directors',
@@ -45,9 +51,10 @@ export const LISTS: readonly ListInfo[] = [
     description: 'Every ten years Sight & Sound asks filmmakers to name the greatest films ever made. This is their 2012 list.',
     source: { label: 'BFI Sight & Sound poll 2012', url: 'https://www.bfi.org.uk/sight-and-sound/greatest-films-all-time' },
     tone: 'gold',
-    load: () => import('../data/lists/ss-directors-2012.json').then((m) => m.default as ListFilm[]),
+    size: 250,
+    load: () => import('../data/lists/ss-directors-2012.json').then((m) => parseFilms(m.default)),
   },
-  {
+  'ss-critics-2012': {
     id: 'ss-critics-2012',
     badge: 'S&S Critics',
     shortName: 'S&S 2012 Critics',
@@ -55,9 +62,10 @@ export const LISTS: readonly ListInfo[] = [
     description: 'The 2012 critics’ poll, the year Vertigo took the top spot from Citizen Kane.',
     source: { label: 'BFI Sight & Sound poll 2012', url: 'https://www.bfi.org.uk/sight-and-sound/greatest-films-all-time' },
     tone: 'gold',
-    load: () => import('../data/lists/ss-critics-2012.json').then((m) => m.default as ListFilm[]),
+    size: 250,
+    load: () => import('../data/lists/ss-critics-2012.json').then((m) => parseFilms(m.default)),
   },
-  {
+  'tspdt-1000': {
     id: 'tspdt-1000',
     badge: 'TSPDT',
     shortName: 'TSPDT 1000',
@@ -65,27 +73,31 @@ export const LISTS: readonly ListInfo[] = [
     description: 'The thousand greatest films, combined from critics’ lists and polls from around the world. 2026 edition.',
     source: { label: 'theyshootpictures.com', url: 'https://www.theyshootpictures.com/gf1000_all1000films_table.php' },
     tone: 'plain',
-    load: () => import('../data/lists/tspdt-1000.json').then((m) => m.default as ListFilm[]),
+    size: 1000,
+    load: () => import('../data/lists/tspdt-1000.json').then((m) => parseFilms(m.default)),
   },
-];
+};
 
-export const listById = (id: string): ListInfo | undefined => LISTS.find((list) => list.id === id);
+/** In badge priority order. */
+export const LISTS: readonly ListInfo[] = LIST_IDS.map((id) => LIST_INFO[id]);
 
-export const listPath = (id: ListId): string => `/lists/${id}`;
+export const listById = (id: ListId): ListInfo => LIST_INFO[id];
 
 export const imdbUrl = (id: string): string => `https://www.imdb.com/title/${id}/`;
 
 /** Anchor of a film on its list page, so a badge can scroll to and open it. */
-export const filmAnchor = (rank: number, imdb?: string): string => (imdb ? `film-${imdb}` : `rank-${rank}`);
+export const filmAnchor = (rank: number, imdb?: string): string =>
+  imdb !== undefined && imdb !== '' ? `film-${imdb}` : `rank-${rank}`;
 
 /**
  * Where a ranked list crosses its nominal size: ranks come from vote counts, so the last tie
  * can straddle the cut-off (99 films share #224 in the directors' poll). Returns the index
  * where that tie starts, or null when the list fits.
  */
-export function cutoffTie(films: readonly ListFilm[], size = 250): { start: number; rank: number } | null {
+export function cutoffTie(films: readonly ListFilm[], size: number): { start: number; rank: number } | null {
   if (films.length <= size) return null;
-  const rank = films[size - 1].rank;
-  const start = films.findIndex((film) => film.rank === rank);
-  return { start, rank };
+  const last = films[size - 1];
+  if (!last) return null;
+  const start = films.findIndex((film) => film.rank === last.rank);
+  return { start, rank: last.rank };
 }

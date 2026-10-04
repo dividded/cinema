@@ -4,12 +4,13 @@ import { FaImdb } from 'react-icons/fa';
 import { BrandTitle } from '../components/BrandTitle';
 import { MainNav } from '../components/PageShell';
 import { FilterToggle, SearchContainer, SearchInput } from '../components/styled/Controls';
-import { LoadingMessage } from '../components/styled/Feedback';
+import { LoadingMessage } from '../components/LoadingMessage';
 import { Header, TitleBlock } from '../components/styled/Layout';
-import { fetchScreened, ScreenedMovie, useLoaded } from '../hooks/useHistoryData';
-import { cutoffTie, filmAnchor, imdbUrl, LISTS, ListFilm, ListInfo, listPath } from '../lists/catalog';
+import { fetchScreened, useLoaded } from '../hooks/useHistoryData';
+import { ScreenedMovie } from '../types/movie';
+import { cutoffTie, filmAnchor, imdbUrl, listById, LISTS, ListFilm, ListInfo } from '../lists/catalog';
 import { buildListIndex, filmTitles, matchMovie } from '../lists/match';
-import { Link } from '../router';
+import { Link, useLocation, useParams } from '@tanstack/react-router';
 import { getTodayInIsrael } from '../utils/dateTime';
 import { formatShortDate } from '../utils/format';
 
@@ -317,7 +318,8 @@ function matchScreenings(list: ListInfo, films: readonly ListFilm[], movies: rea
   const result = new Map<number, Screened>();
   for (const movie of movies) {
     for (const hit of matchMovie(index, movie)) {
-      const i = position.get(hit.film)!;
+      const i = position.get(hit.film);
+      if (i === undefined) continue;
       const entry = result.get(i) ?? { movies: [], screenings: [] };
       entry.movies.push(movie);
       entry.screenings = [...new Set([...entry.screenings, ...movie.screenings])].sort();
@@ -359,7 +361,7 @@ function FilmRow({
           <span className="title">{film.title}</span>
           <span className="meta">
             {film.director}
-            {film.country ? ` · ${film.country}` : ''}
+            {film.country !== undefined && film.country !== '' ? ` · ${film.country}` : ''}
           </span>
         </FilmText>
         <Side data-open={open ? '' : undefined}>
@@ -378,22 +380,22 @@ function FilmRow({
       {open && (
         <Details id={`${id}-details`}>
           <div className="links">
-            {film.imdb && (
+            {film.imdb !== undefined && (
               <a href={imdbUrl(film.imdb)} target="_blank" rel="noreferrer">
                 <FaImdb aria-hidden="true" /> IMDb
               </a>
             )}
             {screened?.movies
-              .filter((m) => m.siteUrl)
+              .flatMap((m) => (m.siteUrl !== undefined && m.siteUrl !== '' ? [m.siteUrl] : []))
               .slice(0, 1)
-              .map((m) => (
-                <a key={m.title} href={m.siteUrl} target="_blank" rel="noreferrer">
+              .map((siteUrl) => (
+                <a key={siteUrl} href={siteUrl} target="_blank" rel="noreferrer">
                   Cinematheque page
                 </a>
               ))}
           </div>
           <dl>
-            {film.original && (
+            {film.original !== undefined && (
               <>
                 <dt>Original title</dt>
                 <dd dir="auto">{film.original}</dd>
@@ -435,7 +437,13 @@ function FilmRow({
   );
 }
 
-export default function ListPage({ list }: { list: ListInfo }) {
+export default function ListRoutePage() {
+  const { listId } = useParams({ from: '/lists/$listId' });
+  // Keyed so switching lists starts from a clean page (search, open films).
+  return <ListPage key={listId} list={listById(listId)} />;
+}
+
+function ListPage({ list }: { list: ListInfo }) {
   const [films, setFilms] = useState<ListFilm[] | null>(null);
   const [loadError, setLoadError] = useState(false);
   const { data: screenedMovies } = useLoaded(fetchScreened);
@@ -448,52 +456,61 @@ export default function ListPage({ list }: { list: ListInfo }) {
   const today = getTodayInIsrael();
 
   useEffect(() => {
-    list.load().then(setFilms, () => setLoadError(true));
+    list.load().then(setFilms, () => { setLoadError(true); });
   }, [list]);
 
   const screened = useMemo(
     () => (films && screenedMovies ? matchScreenings(list, films, screenedMovies) : new Map<number, Screened>()),
     [list, films, screenedMovies],
   );
-  const searchText = useMemo(() => films?.map(filmSearchText) ?? [], [films]);
+  const entries = useMemo(
+    () => films?.map((film, index) => ({ film, index, text: filmSearchText(film) })) ?? [],
+    [films],
+  );
 
   const visible = useMemo(() => {
-    if (!films) return [];
     const q = deferredQuery.trim().toLowerCase();
-    return films
-      .map((_, i) => i)
-      .filter((i) => (!onlyScreened || screened.has(i)) && (!q || searchText[i].includes(q) || String(films[i].rank) === q));
-  }, [films, deferredQuery, onlyScreened, screened, searchText]);
+    return entries.filter(
+      ({ film, index, text }) =>
+        (!onlyScreened || screened.has(index)) && (q === '' || text.includes(q) || String(film.rank) === q),
+    );
+  }, [entries, deferredQuery, onlyScreened, screened]);
 
-  const tie = useMemo(() => (films ? cutoffTie(films) : null), [films]);
+  const tie = useMemo(() => (films ? cutoffTie(films, list.size) : null), [films, list.size]);
   const filtering = onlyScreened || deferredQuery.trim() !== '';
-  const ranked = tie ? visible.filter((i) => i < tie.start) : visible;
-  const tied = tie ? visible.filter((i) => i >= tie.start) : [];
+  const ranked = tie ? visible.filter(({ index }) => index < tie.start) : visible;
+  const tied = tie ? visible.filter(({ index }) => index >= tie.start) : [];
   const tieOpen = showTie || filtering;
 
   // A badge links to #film-<imdb>: open that film and bring it into view.
+  const hash = useLocation({ select: (location) => location.hash });
   useEffect(() => {
-    if (!films) return;
-    const hash = decodeURIComponent(window.location.hash.slice(1));
-    if (!hash) return;
+    if (!films || hash === '') return;
     const i = films.findIndex((film) => filmAnchor(film.rank, film.imdb) === hash);
     if (i < 0) return;
-    const tieStart = cutoffTie(films)?.start;
-    if (tieStart != null && i >= tieStart) setShowTie(true);
-    setOpen(new Set([i]));
-    setFlash(i);
-    requestAnimationFrame(() => document.getElementById(hash)?.scrollIntoView({ block: 'center' }));
-    const timer = setTimeout(() => setFlash(null), 1600);
-    return () => clearTimeout(timer);
-  }, [films]);
+    const tieStart = cutoffTie(films, list.size)?.start;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const frame = requestAnimationFrame(() => {
+      if (tieStart !== undefined && i >= tieStart) setShowTie(true);
+      setOpen(new Set([i]));
+      setFlash(i);
+      requestAnimationFrame(() => document.getElementById(hash)?.scrollIntoView({ block: 'center' }));
+      timer = setTimeout(() => {
+        setFlash(null);
+      }, 1600);
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(timer);
+    };
+  }, [films, hash, list.size]);
 
-  const toggle = (i: number) =>
-    setOpen((current) => {
+  const toggle = (i: number) => { setOpen((current) => {
       const next = new Set(current);
       if (next.has(i)) next.delete(i);
       else next.add(i);
       return next;
-    });
+    }); };
 
   const others = LISTS.filter((other) => other.id !== list.id);
 
@@ -515,7 +532,7 @@ export default function ListPage({ list }: { list: ListInfo }) {
           <OtherLists>
             <span className="label">Other lists</span>
             {others.map((other) => (
-              <Link key={other.id} to={listPath(other.id)}>
+              <Link key={other.id} to="/lists/$listId" params={{ listId: other.id }}>
                 {other.shortName}
               </Link>
             ))}
@@ -528,12 +545,12 @@ export default function ListPage({ list }: { list: ListInfo }) {
               type="search"
               placeholder="Search"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => { setQuery(e.target.value); }}
               autoComplete="off"
               spellCheck={false}
             />
           </SearchContainer>
-          <FilterToggle type="button" $active={onlyScreened} aria-pressed={onlyScreened} onClick={() => setOnlyScreened((v) => !v)}>
+          <FilterToggle type="button" $active={onlyScreened} aria-pressed={onlyScreened} onClick={() => { setOnlyScreened((v) => !v); }}>
             At the cinematheque
           </FilterToggle>
         </Toolbar>
@@ -547,33 +564,37 @@ export default function ListPage({ list }: { list: ListInfo }) {
         ) : (
           <>
             <Rows>
-              {ranked.map((i) => (
+              {ranked.map(({ film, index }) => (
                 <FilmRow
-                  key={i}
-                  film={films[i]}
-                  screened={screened.get(i)}
-                  open={open.has(i)}
-                  flash={flash === i}
-                  onToggle={() => toggle(i)}
+                  key={index}
+                  film={film}
+                  screened={screened.get(index)}
+                  open={open.has(index)}
+                  flash={flash === index}
+                  onToggle={() => {
+                    toggle(index);
+                  }}
                   today={today}
                 />
               ))}
             </Rows>
             {tie && tied.length > 0 && (
               <>
-                <TieHeader type="button" aria-expanded={tieOpen} onClick={() => setShowTie((v) => !v)} disabled={filtering}>
+                <TieHeader type="button" aria-expanded={tieOpen} onClick={() => { setShowTie((v) => !v); }} disabled={filtering}>
                   <span className="title">Also tied at #{tie.rank}</span>
                 </TieHeader>
                 {tieOpen && (
                   <Rows>
-                    {tied.map((i) => (
+                    {tied.map(({ film, index }) => (
                       <FilmRow
-                        key={i}
-                        film={films[i]}
-                        screened={screened.get(i)}
-                        open={open.has(i)}
-                        flash={flash === i}
-                        onToggle={() => toggle(i)}
+                        key={index}
+                        film={film}
+                        screened={screened.get(index)}
+                        open={open.has(index)}
+                        flash={flash === index}
+                        onToggle={() => {
+                          toggle(index);
+                        }}
                         today={today}
                       />
                     ))}

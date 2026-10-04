@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 export interface Env {
   MOVIES_KV: KVNamespace;
   MOVIES_KV_KEY: string;
@@ -7,29 +9,35 @@ export interface Env {
   FETCH_DAYS: string;
 }
 
-interface Screening {
-  dateTime: string;
-  venue: string;
-}
+const ScreeningSchema = z.looseObject({ dateTime: z.string(), venue: z.string() });
+type Screening = z.infer<typeof ScreeningSchema>;
 
-interface Movie {
-  title: string;
-  screenings: Screening[];
-  [field: string]: unknown;
-}
+/** Movies keep every field the scraper sends; these are the ones the worker reads. */
+const MovieSchema = z.looseObject({
+  title: z.string(),
+  screenings: z.array(ScreeningSchema),
+  altName: z.string().optional(),
+  year: z.number().optional(),
+  siteUrl: z.string().optional(),
+});
+type Movie = z.infer<typeof MovieSchema>;
 
-interface DayResult {
-  date: string;
-  ok: boolean;
-  movies: Movie[];
-  error?: string;
-}
+const DayResultSchema = z.object({
+  date: z.string(),
+  ok: z.boolean(),
+  movies: z.array(MovieSchema),
+  error: z.string().optional(),
+});
+type DayResult = z.infer<typeof DayResultSchema>;
+
+const ScrapeResponseSchema = z.object({ days: z.array(DayResultSchema) });
 
 /**
  * Last successfully fetched movies per date, stored as one KV value per month and kept
  * permanently (past days are history, never deleted). Failed fetches never overwrite an entry.
  */
-type DayStore = Record<string, { movies: Movie[]; fetchedAt: string }>;
+const DayStoreSchema = z.record(z.string(), z.object({ movies: z.array(MovieSchema), fetchedAt: z.string() }));
+type DayStore = z.infer<typeof DayStoreSchema>;
 
 /** What the frontend loads: every movie plus the dates we actually have data for. */
 interface Schedule {
@@ -57,17 +65,30 @@ interface ScreenedIndex {
   movies: { title: string; altName?: string; year?: number; siteUrl?: string; screenings: string[] }[];
 }
 
-interface RefreshMeta {
-  updatedAt: string;
-  movieCount: number;
-  screeningCount: number;
-  firstScreeningDate: string | null;
-  lastScreeningDate: string | null;
-  knownDates: number;
-  failedDates: string[];
-  missingDates: string[];
+const RefreshMetaSchema = z.object({
+  updatedAt: z.string(),
+  movieCount: z.number(),
+  screeningCount: z.number(),
+  firstScreeningDate: z.string().nullable(),
+  lastScreeningDate: z.string().nullable(),
+  knownDates: z.number(),
+  failedDates: z.array(z.string()),
+  missingDates: z.array(z.string()),
   /** Month keys written by this refresh; earlier months stay in KV as history. */
-  monthsWritten: string[];
+  monthsWritten: z.array(z.string()),
+});
+type RefreshMeta = z.infer<typeof RefreshMetaSchema>;
+
+/** Reads and validates a JSON value from KV; null when it is missing or not the expected shape. */
+async function readJson<T>(kv: KVNamespace, key: string, schema: z.ZodType<T>): Promise<T | null> {
+  const text = await kv.get(key);
+  if (text === null) return null;
+  const parsed = schema.safeParse(JSON.parse(text));
+  if (!parsed.success) {
+    console.error(`KV value ${key} has an unexpected shape`, parsed.error.message);
+    return null;
+  }
+  return parsed.data;
 }
 
 const REFRESH_TIMEOUT_MS = 5 * 60 * 1000;
@@ -125,8 +146,9 @@ async function cachedJsonResponse(request: Request, json: string): Promise<Respo
 const monthOf = (date: string) => date.slice(0, 7);
 
 function addDays(date: string, days: number): string {
-  const [year, month, day] = date.split('-').map(Number);
-  return new Date(Date.UTC(year, month - 1, day + days)).toISOString().slice(0, 10);
+  const result = new Date(`${date}T00:00:00Z`);
+  result.setUTCDate(result.getUTCDate() + days);
+  return result.toISOString().slice(0, 10);
 }
 
 function todayInIsrael(): string {
@@ -172,32 +194,25 @@ function daysFromMovies(movies: Movie[], fetchedAt: string): DayStore {
   );
 }
 
-function isDayResultList(value: unknown): value is DayResult[] {
-  return (
-    Array.isArray(value) &&
-    value.every(
-      d =>
-        typeof d?.date === 'string' &&
-        typeof d?.ok === 'boolean' &&
-        Array.isArray(d?.movies) &&
-        d.movies.every((m: Movie) => typeof m?.title === 'string' && Array.isArray(m?.screenings)),
-    )
-  );
-}
-
-function summarize(schedule: Schedule, results: DayResult[], store: DayStore, months: string[]): RefreshMeta {
+function summarize(
+  updatedAt: string,
+  schedule: Schedule,
+  results: DayResult[],
+  store: DayStore,
+  months: string[],
+): RefreshMeta {
   const dates = schedule.movies.flatMap(m => m.screenings.map(screeningDate)).sort();
   const failedDates = results.filter(d => !d.ok).map(d => d.date);
 
   return {
-    updatedAt: schedule.updatedAt!,
+    updatedAt,
     movieCount: schedule.movies.length,
     screeningCount: dates.length,
     firstScreeningDate: dates[0] ?? null,
     lastScreeningDate: dates[dates.length - 1] ?? null,
     knownDates: schedule.dates.length,
     failedDates,
-    missingDates: failedDates.filter(date => !store[date]),
+    missingDates: failedDates.filter(date => !(date in store)),
     monthsWritten: months,
   };
 }
@@ -215,13 +230,13 @@ async function loadMonthStores(
 ): Promise<Record<string, DayStore> & { [MIGRATED]?: boolean }> {
   const k = keys(env);
   const stores: Record<string, DayStore> & { [MIGRATED]?: boolean } = {};
-  const loaded = await Promise.all(months.map(month => env.MOVIES_KV.get<DayStore>(k.month(month), 'json')));
+  const loaded = await Promise.all(months.map(month => readJson(env.MOVIES_KV, k.month(month), DayStoreSchema)));
 
   let legacy: DayStore | null = null;
   if (loaded.some(store => store === null)) {
-    legacy = await env.MOVIES_KV.get<DayStore>(k.legacyDays, 'json');
+    legacy = await readJson(env.MOVIES_KV, k.legacyDays, DayStoreSchema);
     if (legacy) stores[MIGRATED] = true;
-    legacy ??= daysFromMovies((await env.MOVIES_KV.get<Movie[]>(k.movies, 'json')) ?? [], now);
+    legacy ??= daysFromMovies((await readJson(env.MOVIES_KV, k.movies, z.array(MovieSchema))) ?? [], now);
   }
 
   for (const [i, month] of months.entries()) {
@@ -243,13 +258,14 @@ async function refreshMovies(env: Env): Promise<RefreshMeta> {
 
   const response = await fetch(url, { signal: AbortSignal.timeout(REFRESH_TIMEOUT_MS) });
   if (!response.ok) {
-    throw new Error(`Scrape endpoint returned ${response.status}`);
+    throw new Error(`Scrape endpoint returned ${String(response.status)}`);
   }
 
-  const { days: results } = (await response.json()) as { days?: unknown };
-  if (!isDayResultList(results)) {
-    throw new Error('Scrape endpoint returned an unexpected payload');
+  const payload = ScrapeResponseSchema.safeParse(await response.json());
+  if (!payload.success) {
+    throw new Error(`Scrape endpoint returned an unexpected payload: ${payload.error.message}`);
   }
+  const results = payload.data.days;
   if (!results.some(d => d.ok && d.movies.length > 0)) {
     throw new Error('Scrape returned no movies; keeping existing data');
   }
@@ -264,17 +280,20 @@ async function refreshMovies(env: Env): Promise<RefreshMeta> {
 
   const stores = await loadMonthStores(env, [...months], now);
   for (const day of results) {
-    if (day.ok) stores[monthOf(day.date)][day.date] = { movies: day.movies, fetchedAt: now };
+    const monthStore = (stores[monthOf(day.date)] ??= {});
+    if (day.ok) monthStore[day.date] = { movies: day.movies, fetchedAt: now };
   }
 
-  const store: DayStore = Object.assign({}, ...Object.values(stores));
-  const dates = Object.keys(store).filter(date => date >= today).sort();
+  const store: DayStore = Object.fromEntries(Object.values(stores).flatMap(monthStore => Object.entries(monthStore)));
+  const upcoming = Object.entries(store)
+    .filter(([date]) => date >= today)
+    .sort(([a], [b]) => a.localeCompare(b));
   const schedule: Schedule = {
     updatedAt: now,
-    dates,
-    movies: mergeMovies(dates.flatMap(date => store[date].movies)),
+    dates: upcoming.map(([date]) => date),
+    movies: mergeMovies(upcoming.flatMap(([, day]) => day.movies)),
   };
-  const meta = summarize(schedule, results, store, Object.keys(stores).sort());
+  const meta = summarize(now, schedule, results, store, Object.keys(stores).sort());
 
   await Promise.all([
     ...Object.entries(stores).map(([month, monthStore]) => env.MOVIES_KV.put(k.month(month), JSON.stringify(monthStore))),
@@ -282,7 +301,7 @@ async function refreshMovies(env: Env): Promise<RefreshMeta> {
     env.MOVIES_KV.put(k.movies, JSON.stringify(schedule.movies)),
     env.MOVIES_KV.put(k.meta, JSON.stringify(meta)),
   ]);
-  if (stores[MIGRATED]) await env.MOVIES_KV.delete(k.legacyDays);
+  if (stores[MIGRATED] === true) await env.MOVIES_KV.delete(k.legacyDays);
   await rebuildHistoryIndexes(env, stores);
   return meta;
 }
@@ -296,17 +315,16 @@ async function listMonths(env: Env): Promise<string[]> {
     const page = await env.MOVIES_KV.list({ prefix, cursor });
     months.push(...page.keys.map(key => key.name.slice(prefix.length)));
     cursor = page.list_complete ? undefined : page.cursor;
-  } while (cursor);
+  } while (cursor !== undefined);
   return months.filter(month => /^\d{4}-\d{2}$/.test(month)).sort();
 }
 
 /** The past days (before today) of one stored month, merged into one movie per title. */
 function historyMonth(month: string, store: DayStore, today: string): HistoryMonth {
-  const dates = Object.keys(store)
-    .filter(date => date < today && store[date].movies.length > 0)
-    .sort()
-    .reverse();
-  return { month, dates, movies: mergeMovies(dates.flatMap(date => store[date].movies)) };
+  const past = Object.entries(store)
+    .filter(([date, day]) => date < today && day.movies.length > 0)
+    .sort(([a], [b]) => b.localeCompare(a));
+  return { month, dates: past.map(([date]) => date), movies: mergeMovies(past.flatMap(([, day]) => day.movies)) };
 }
 
 /**
@@ -320,7 +338,7 @@ async function rebuildHistoryIndexes(
   const k = keys(env);
   const months = [...new Set([...(await listMonths(env)), ...Object.keys(loaded)])].sort();
   const stores = await Promise.all(
-    months.map(async month => loaded[month] ?? (await env.MOVIES_KV.get<DayStore>(k.month(month), 'json')) ?? {}),
+    months.map(async month => loaded[month] ?? (await readJson(env.MOVIES_KV, k.month(month), DayStoreSchema)) ?? {}),
   );
   const today = todayInIsrael();
   const now = new Date().toISOString();
@@ -328,18 +346,23 @@ async function rebuildHistoryIndexes(
   const history: HistoryIndex = { updatedAt: now, months: [] };
   const byTitle = new Map<string, ScreenedIndex['movies'][number]>();
   for (const [i, month] of months.entries()) {
-    const past = historyMonth(month, stores[i], today);
+    const monthStore = stores[i] ?? {};
+    const past = historyMonth(month, monthStore, today);
     if (past.dates.length > 0) {
       history.months.push({ month, days: past.dates.length, movies: past.movies.length });
     }
-    for (const date of Object.keys(stores[i]).sort()) {
-      for (const movie of stores[i][date].movies) {
+    const days = Object.entries(monthStore).sort(([a], [b]) => a.localeCompare(b));
+    for (const [, day] of days) {
+      for (const movie of day.movies) {
         let entry = byTitle.get(movie.title);
         if (!entry) {
-          entry = { title: movie.title, screenings: [] };
-          for (const field of ['altName', 'year', 'siteUrl'] as const) {
-            if (movie[field] != null) (entry as Record<string, unknown>)[field] = movie[field];
-          }
+          entry = {
+            title: movie.title,
+            ...(movie.altName != null && { altName: movie.altName }),
+            ...(movie.year != null && { year: movie.year }),
+            ...(movie.siteUrl != null && { siteUrl: movie.siteUrl }),
+            screenings: [],
+          };
           byTitle.set(movie.title, entry);
         }
         for (const screening of movie.screenings) {
@@ -367,7 +390,7 @@ async function handleHistoryIndex(request: Request, env: Env, which: 'history' |
 }
 
 async function handleHistoryMonth(request: Request, env: Env, month: string): Promise<Response> {
-  const store = await env.MOVIES_KV.get<DayStore>(keys(env).month(month), 'json');
+  const store = await readJson(env.MOVIES_KV, keys(env).month(month), DayStoreSchema);
   if (!store) return jsonResponse({ error: 'No data for this month' }, 404);
   return cachedJsonResponse(request, JSON.stringify(historyMonth(month, store, todayInIsrael())));
 }
@@ -375,10 +398,10 @@ async function handleHistoryMonth(request: Request, env: Env, month: string): Pr
 async function handleSchedule(request: Request, env: Env): Promise<Response> {
   const k = keys(env);
   const scheduleJson = await env.MOVIES_KV.get(k.schedule);
-  if (scheduleJson) return cachedJsonResponse(request, scheduleJson);
+  if (scheduleJson !== null) return cachedJsonResponse(request, scheduleJson);
 
   // Before the first refresh with per-day data, derive the dates from the movie list.
-  const movies = await env.MOVIES_KV.get<Movie[]>(k.movies, 'json');
+  const movies = await readJson(env.MOVIES_KV, k.movies, z.array(MovieSchema));
   if (!movies) return jsonResponse({ error: 'No movie data available yet' }, 503);
 
   const today = todayInIsrael();
@@ -390,7 +413,7 @@ async function handleSchedule(request: Request, env: Env): Promise<Response> {
 }
 
 async function handleManualRefresh(env: Env): Promise<Response> {
-  const previous = await env.MOVIES_KV.get<RefreshMeta>(keys(env).meta, 'json');
+  const previous = await readJson(env.MOVIES_KV, keys(env).meta, RefreshMetaSchema);
   const sinceLast = previous ? Date.now() - Date.parse(previous.updatedAt) : Infinity;
   if (sinceLast < MANUAL_REFRESH_COOLDOWN_MS) {
     return jsonResponse({ error: 'Refreshed recently, try again later', ...previous }, 429);
@@ -399,7 +422,7 @@ async function handleManualRefresh(env: Env): Promise<Response> {
   try {
     return jsonResponse(await refreshMovies(env));
   } catch (error) {
-    return jsonResponse({ error: (error as Error).message }, 502);
+    return jsonResponse({ error: error instanceof Error ? error.message : String(error) }, 502);
   }
 }
 
@@ -417,14 +440,14 @@ export default {
 
     if (request.method === 'GET' && (pathname === '/' || pathname === '/api/movies/cinematheque')) {
       const moviesJson = await env.MOVIES_KV.get(keys(env).movies);
-      return moviesJson
+      return moviesJson !== null
         ? cachedJsonResponse(request, moviesJson)
         : jsonResponse({ error: 'No movie data available yet' }, 503);
     }
 
     if (request.method === 'GET' && pathname === '/api/health') {
       const meta = await env.MOVIES_KV.get(keys(env).meta);
-      return meta
+      return meta !== null
         ? new Response(meta, { headers: { ...CORS_HEADERS, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } })
         : jsonResponse({ error: 'Not refreshed by the worker yet' }, 503);
     }
@@ -434,8 +457,9 @@ export default {
     }
 
     const monthMatch = /^\/api\/history\/(\d{4}-\d{2})$/.exec(pathname);
-    if (request.method === 'GET' && monthMatch) {
-      return handleHistoryMonth(request, env, monthMatch[1]);
+    const month = monthMatch?.[1];
+    if (request.method === 'GET' && month !== undefined) {
+      return handleHistoryMonth(request, env, month);
     }
 
     if (request.method === 'GET' && pathname === '/api/screened') {
@@ -449,7 +473,7 @@ export default {
     return jsonResponse({ error: 'Not found' }, 404);
   },
 
-  async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
+  scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): void {
     // Throwing marks the cron run as failed in the Cloudflare dashboard.
     ctx.waitUntil(
       refreshMovies(env).then(meta => {

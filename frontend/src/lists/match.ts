@@ -71,7 +71,7 @@ interface TitleKeys {
 }
 
 function keysOf(titles: readonly (string | undefined)[]): TitleKeys {
-  const present = titles.filter((t): t is string => Boolean(t && t.trim()));
+  const present = titles.filter((t): t is string => Boolean(t?.trim()));
   const full = [...new Set(present.map(titleKey))].filter(Boolean);
   const main = [...new Set(present.map(mainTitleKey))].filter((k): k is string => k !== null && !full.includes(k));
   return { full, main };
@@ -168,7 +168,8 @@ export function matchMovie(index: ListIndex, movie: MatchableMovie): ListHit[] {
     const current = best.get(list);
     if (!current || score(film) < score(current)) best.set(list, film);
   }
-  return index.order
-    .filter((id) => best.has(id))
-    .map((id) => ({ list: id, rank: best.get(id)!.rank, film: best.get(id)! }));
+  return index.order.flatMap((id) => {
+    const film = best.get(id);
+    return film ? [{ list: id, rank: film.rank, film }] : [];
+  });
 }

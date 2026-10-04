@@ -1,8 +1,7 @@
 import styled from '@emotion/styled'
 import { useEffect, useRef, useState } from 'react'
-import { allBackgroundNames } from '../hooks/useRotatingBackground'
-import { setSearch } from '../router'
-import { DEBUG_BACKGROUND_VARIANTS, resolveBackground } from '../utils/backgroundLooks'
+import { useNavigate } from '@tanstack/react-router'
+import { BACKGROUND_NAMES, BACKGROUNDS, backgroundImageUrls, BackgroundName } from '../backgrounds'
 
 // Only loaded with ?debugbg. A compact bar pinned to the bottom so the hero stays visible
 // while flipping through backgrounds, on phones as well as desktops.
@@ -35,18 +34,6 @@ const Label = styled.span`
   letter-spacing: 0.08em;
   opacity: 0.6;
   font-size: 0.7rem;
-`
-
-const Status = styled.span<{ $live: boolean }>`
-  flex: 0 0 auto;
-  padding: 0.1rem 0.4rem;
-  border-radius: 4px;
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: ${(p) => (p.$live ? '#1a1916' : '#f3f1eb')};
-  background: ${(p) => (p.$live ? '#d4af37' : 'rgba(255, 255, 255, 0.18)')};
 `
 
 const Note = styled.div`
@@ -94,17 +81,6 @@ const Strip = styled.div`
   scroll-snap-type: x proximity;
   padding: 0.1rem 0.6rem 0.6rem;
   scrollbar-width: thin;
-`
-
-const Divider = styled.span`
-  flex: 0 0 auto;
-  align-self: center;
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
-  font-size: 0.62rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  opacity: 0.55;
 `
 
 const Thumb = styled.button<{ $active: boolean }>`
@@ -160,21 +136,21 @@ const Pill = styled.button`
   white-space: nowrap;
 `
 
-export default function BackgroundDebugPanel({ current }: { current: string | null }) {
-  const names = allBackgroundNames()
-  const variantStart = names.findIndex((name) => name in DEBUG_BACKGROUND_VARIANTS)
-  const live = current !== null && !(current in DEBUG_BACKGROUND_VARIANTS)
-  const note = current ? DEBUG_BACKGROUND_VARIANTS[current]?.note : undefined
+export default function BackgroundDebugPanel({ current }: { current: BackgroundName | null }) {
+  const navigate = useNavigate()
   const [open, setOpen] = useState(true)
   const stripRef = useRef<HTMLDivElement>(null)
-  const index = current ? names.indexOf(current) : -1
+  const index = current ? BACKGROUND_NAMES.indexOf(current) : -1
+  const credit = current ? BACKGROUNDS[current] : null
 
-  const pick = (name: string) => {
-    const params = new URLSearchParams(window.location.search)
-    params.set('debugbg', name)
-    setSearch(params)
+  const pick = (name: BackgroundName) => {
+    void navigate({ to: '.', search: (prev) => ({ ...prev, debugbg: name }), replace: true, resetScroll: false })
   }
-  const step = (delta: number) => pick(names[(Math.max(index, 0) + delta + names.length) % names.length])
+  const step = (delta: number) => {
+    const count = BACKGROUND_NAMES.length
+    const next = BACKGROUND_NAMES[(Math.max(index, 0) + delta + count) % count]
+    if (next) pick(next)
+  }
 
   useEffect(() => {
     if (!open) return
@@ -190,13 +166,21 @@ export default function BackgroundDebugPanel({ current }: { current: string | nu
       if (event.key === 'ArrowRight') step(1)
     }
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+    }
   })
 
   if (!open) {
     return (
-      <Pill type="button" onClick={() => setOpen(true)} aria-label="Open background picker">
-        BG · {current ?? 'none'} {current ? (live ? '· live' : '· test') : ''}
+      <Pill
+        type="button"
+        onClick={() => {
+          setOpen(true)
+        }}
+        aria-label="Open background picker"
+      >
+        BG · {current ?? 'none'}
       </Pill>
     )
   }
@@ -205,35 +189,67 @@ export default function BackgroundDebugPanel({ current }: { current: string | nu
     <Bar role="region" aria-label="Background picker">
       <Row>
         <Label>BG</Label>
-        {current && <Status $live={live}>{live ? 'Live' : 'Test'}</Status>}
         <Current>
           {current ?? 'none'}
-          {index >= 0 && <span style={{ opacity: 0.55, fontWeight: 400 }}> · {index + 1}/{names.length}</span>}
+          {index >= 0 && (
+            <span style={{ opacity: 0.55, fontWeight: 400 }}>
+              {' '}
+              · {index + 1}/{BACKGROUND_NAMES.length}
+            </span>
+          )}
         </Current>
-        <IconButton type="button" onClick={() => step(-1)} aria-label="Previous background">‹</IconButton>
-        <IconButton type="button" onClick={() => step(1)} aria-label="Next background">›</IconButton>
-        <IconButton type="button" onClick={() => setOpen(false)} aria-label="Hide background picker">▾</IconButton>
+        <IconButton
+          type="button"
+          onClick={() => {
+            step(-1)
+          }}
+          aria-label="Previous background"
+        >
+          ‹
+        </IconButton>
+        <IconButton
+          type="button"
+          onClick={() => {
+            step(1)
+          }}
+          aria-label="Next background"
+        >
+          ›
+        </IconButton>
+        <IconButton
+          type="button"
+          onClick={() => {
+            setOpen(false)
+          }}
+          aria-label="Hide background picker"
+        >
+          ▾
+        </IconButton>
       </Row>
-      <Note>{note ?? (live ? 'In the rotation everyone sees' : '')}</Note>
+      <Note>{credit ? `${credit.film}, ${credit.director}, ${credit.year}` : ''}</Note>
       <Strip ref={stripRef}>
-        {names.map((name, i) => {
-          const { webp, look } = resolveBackground(import.meta.env.BASE_URL, name)
-          return [
-            i === 0 && <Divider key="live">live</Divider>,
-            i === variantStart && <Divider key="variants">test only</Divider>,
-            <Thumb key={name} type="button" $active={name === current} aria-pressed={name === current} onClick={() => pick(name)} title={name}>
+        {BACKGROUND_NAMES.map((name) => {
+          const { look } = BACKGROUNDS[name]
+          return (
+            <Thumb
+              key={name}
+              type="button"
+              $active={name === current}
+              aria-pressed={name === current}
+              onClick={() => {
+                pick(name)
+              }}
+              title={name}
+            >
               <img
-                src={webp}
+                src={backgroundImageUrls(import.meta.env.BASE_URL, name).webp}
                 alt=""
                 loading="lazy"
-                style={{
-                  objectPosition: look.mobilePosition ?? look.position,
-                  filter: look.filter,
-                }}
+                style={{ objectPosition: look.mobilePosition ?? look.position }}
               />
               <span>{name}</span>
-            </Thumb>,
-          ]
+            </Thumb>
+          )
         })}
       </Strip>
     </Bar>

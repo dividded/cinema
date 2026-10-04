@@ -50,9 +50,18 @@ The page is built so everything needed for the first screen downloads in paralle
   rank) for each list a movie is on. The datasets are built by `frontend/scripts/lists/build-lists.py`
   (sources and the matching rules are described there and in `src/lists/match.ts`; matching is strict:
   same normalized title and a year within one).
-- GitHub Pages only serves files, so the build writes a copy of `index.html` for each route.
-- `?debugbg` on any page shows a background picker (`?debugbg=<name>` opens a specific one), including
-  debug-only variants of the stills (see `src/utils/backgroundLooks.ts`).
+- Routing uses TanStack Router (`frontend/src/router.tsx`). GitHub Pages only serves files, so the build
+  writes a copy of `index.html` for each route.
+- The film stills at the top of each page, their framing and credits are in `frontend/src/backgrounds.ts`.
+  `?debugbg` on any page shows a picker to flip through them (`?debugbg=<name>` opens a specific one).
+
+## Code quality
+
+All three packages (`frontend`, `cloudflare-worker`, `backend-node`) are TypeScript with `strict` and
+`noUncheckedIndexedAccess`, linted with typescript-eslint's `strict-type-checked` rules plus a ban on type
+assertions (`as`) and non-null assertions (`!`). Data from the network, KV and the list files is validated
+with zod instead of being cast. Each package runs `yarn typecheck`/`yarn lint`/`yarn test` in CI (Node 24).
+TypeScript is pinned to 6.0, the newest version typescript-eslint supports.
 
 For local development run the worker (`cd cloudflare-worker && yarn dev`, port 8787) and the frontend
 (`cd frontend && yarn dev`); set `VITE_API_URL` to point the frontend at another API.

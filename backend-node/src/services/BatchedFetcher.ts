@@ -81,7 +81,7 @@ export class BatchedFetcher {
     for (const day of await this._fetchInBatches(dates)) results.set(day.date, day);
 
     for (let round = 1; round <= this.config.retryRounds; round++) {
-      const failed = dates.filter(date => !results.get(date)!.ok);
+      const failed = dates.filter(date => results.get(date)?.ok !== true);
       if (failed.length === 0) break;
 
       logger.info(`Retry ${round}/${this.config.retryRounds} for ${failed.length} failed dates...`);
@@ -89,10 +89,12 @@ export class BatchedFetcher {
       for (const day of await this._fetchInBatches(failed)) results.set(day.date, day);
     }
 
-    const days = dates.map(date => results.get(date)!);
+    const days = dates.map(
+      (date): DayResult => results.get(date) ?? { date, ok: false, movies: [], error: 'Not fetched' },
+    );
     const failed = days.filter(day => !day.ok).map(day => day.date);
     logger.info(`Fetched ${days.length - failed.length}/${days.length} dates` +
-                (failed.length ? `; failed: ${failed.join(', ')}` : ''));
+                (failed.length > 0 ? `; failed: ${failed.join(', ')}` : ''));
     return days;
   }
 
@@ -128,7 +130,7 @@ export class BatchedFetcher {
       
       // Create AbortController for timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), this.config.fetchTimeoutMs);
+      const timeoutId = setTimeout(() => { controller.abort(); }, this.config.fetchTimeoutMs);
 
       const response = await fetch(`https://www.cinema.co.il/shown/?date=${date}`, {
         signal: controller.signal
@@ -154,14 +156,15 @@ export class BatchedFetcher {
       logger.debug(`[${index}/${total}] ✓ Success: ${movies.length} movies for ${date}`);
       return { date, ok: true, movies };
 
-    } catch (fetchError: any) {
-      if (fetchError.name === 'AbortError') {
+    } catch (fetchError: unknown) {
+      const timedOut = fetchError instanceof Error && fetchError.name === 'AbortError';
+      const message = fetchError instanceof Error ? fetchError.message : String(fetchError);
+      if (timedOut) {
         logger.error(`[${index}/${total}] ✗ Timeout for ${date} (exceeded ${this.config.fetchTimeoutMs}ms)`);
       } else {
-        logger.error(`[${index}/${total}] ✗ Error for ${date}:`, fetchError.message);
+        logger.error(`[${index}/${total}] ✗ Error for ${date}:`, message);
       }
-      const error = fetchError.name === 'AbortError' ? 'Timeout' : String(fetchError.message);
-      return { date, ok: false, movies: [], error };
+      return { date, ok: false, movies: [], error: timedOut ? 'Timeout' : message };
     }
   }
 

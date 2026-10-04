@@ -5,17 +5,17 @@ import { ListBadges } from '../components/ListBadges';
 import { DateSectionBlock } from '../components/MovieSchedule';
 import { MainNav } from '../components/PageShell';
 import { SearchContainer, SearchInput } from '../components/styled/Controls';
-import { LoadingMessage } from '../components/styled/Feedback';
+import { LoadingMessage } from '../components/LoadingMessage';
 import { Header, HeaderControls, MovieList, TitleBlock } from '../components/styled/Layout';
 import {
   fetchHistoryIndex,
   fetchHistoryMonth,
   fetchScreened,
-  HistoryMonth,
   useLoaded,
 } from '../hooks/useHistoryData';
+import { HistoryMonth } from '../types/movie';
 import { useListHits } from '../hooks/useListHits';
-import { isDateWeekend } from '../hooks/useMovieIndex';
+import { isDateWeekend } from '../utils/movies';
 import { getTodayInIsrael } from '../utils/dateTime';
 import { groupMoviesByDate } from '../utils/movies';
 import { formatMonth, formatShortDate } from '../utils/format';
@@ -168,7 +168,7 @@ function MonthSection({ data }: { data: HistoryMonth }) {
   );
 }
 
-const NO_COUNTS: Record<string, number> = {};
+const NO_COUNTS: ReadonlyMap<string, number> = new Map();
 
 function SearchResults({ query }: { query: string }) {
   const { data: screened, error } = useLoaded(fetchScreened);
@@ -186,7 +186,7 @@ function SearchResults({ query }: { query: string }) {
             (movie.altName?.toLowerCase().includes(lower) ?? false) ||
             (q !== '' && titleKey(movie.altName ?? movie.title).includes(q))),
       )
-      .sort((a, b) => b.past[b.past.length - 1].localeCompare(a.past[a.past.length - 1]));
+      .sort((a, b) => (b.past.at(-1) ?? '').localeCompare(a.past.at(-1) ?? ''));
   }, [screened, query, today]);
   const listHits = useListHits(results);
 
@@ -200,7 +200,7 @@ function SearchResults({ query }: { query: string }) {
         <Result key={movie.title}>
           <ResultTitle>
             <span>
-              {movie.altName && movie.altName !== movie.title ? (
+              {movie.altName !== undefined && movie.altName !== '' && movie.altName !== movie.title ? (
                 <>
                   {movie.altName}
                   <span className="alt">{movie.title}</span>
@@ -211,7 +211,7 @@ function SearchResults({ query }: { query: string }) {
             </span>
             <span className="year">{movie.year ?? '—'}</span>
           </ResultTitle>
-          {listHits[movie.title] && <ListBadges hits={listHits[movie.title]} />}
+          <ListBadges hits={listHits[movie.title] ?? []} />
           <Dates aria-label={`Screened ${movie.past.length} times`}>
             {[...movie.past].reverse().map((dateTime) => (
               <span key={dateTime}>{formatShortDate(dateTime)}</span>
@@ -223,12 +223,19 @@ function SearchResults({ query }: { query: string }) {
   );
 }
 
+function scrollToMonth(month: string): void {
+  // After the next render, in case the month list is only now replacing search results.
+  requestAnimationFrame(() => {
+    document.getElementById(`month-${month}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+}
+
 export default function HistoryPage() {
   const { data: months, error } = useLoaded(fetchHistoryIndex);
   const [wanted, setWanted] = useState(1);
   const [loaded, setLoaded] = useState<Record<string, HistoryMonth>>({});
   const [failed, setFailed] = useState(false);
-  const [jumpTo, setJumpTo] = useState<string | null>(null);
+  const pendingJump = useRef<string | null>(null);
   const [activeMonth, setActiveMonth] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const deferredQuery = useDeferredValue(query);
@@ -236,60 +243,77 @@ export default function HistoryPage() {
   const searching = deferredQuery.trim().length >= 2;
 
   // Load the wanted months in order, so they always render as an unbroken run.
-  const nextToLoad = months?.slice(0, wanted).find((m) => !loaded[m.month]);
+  const nextToLoad = months?.slice(0, wanted).find((m) => !(m.month in loaded));
   useEffect(() => {
     if (!nextToLoad || failed) return;
     let cancelled = false;
-    fetchHistoryMonth(nextToLoad.month)
-      .then((data) => !cancelled && setLoaded((current) => ({ ...current, [data.month]: data })))
-      .catch(() => !cancelled && setFailed(true));
+    fetchHistoryMonth(nextToLoad.month).then(
+      (data) => {
+        if (!cancelled) setLoaded((current) => ({ ...current, [data.month]: data }));
+      },
+      () => {
+        if (!cancelled) setFailed(true);
+      },
+    );
     return () => {
       cancelled = true;
     };
   }, [nextToLoad, failed]);
 
-  const shown = (months ?? []).slice(0, wanted).filter((m) => loaded[m.month]);
-  const busy = Boolean(nextToLoad);
-  const hasMore = Boolean(months && wanted < months.length);
+  const shown = useMemo(
+    () => (months ?? []).slice(0, wanted).flatMap((m) => loaded[m.month] ?? []),
+    [months, wanted, loaded],
+  );
+  const busy = nextToLoad !== undefined;
+  const hasMore = months !== null && wanted < months.length;
 
   // Infinite scroll: ask for the next older month when the end comes within ~1.5 screens.
   useEffect(() => {
     const sentinel = sentinelRef.current;
     if (!sentinel || busy || !hasMore || searching) return;
     const observer = new IntersectionObserver(
-      (entries) => entries.some((e) => e.isIntersecting) && setWanted((n) => n + 1),
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) setWanted((n) => n + 1);
+      },
       { rootMargin: '0px 0px 150% 0px' },
     );
     observer.observe(sentinel);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+    };
   }, [busy, hasMore, searching]);
 
   // A month picked in the bar scrolls into view once it (and everything newer) has loaded.
   useEffect(() => {
-    if (!jumpTo || !loaded[jumpTo] || busy) return;
-    document.getElementById(`month-${jumpTo}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    setJumpTo(null);
-  }, [jumpTo, loaded, busy]);
+    const month = pendingJump.current;
+    if (month === null || !(month in loaded) || busy) return;
+    pendingJump.current = null;
+    scrollToMonth(month);
+  }, [loaded, busy]);
 
   // Highlight the month being read in the bar.
   useEffect(() => {
     if (searching) return;
-    const headings = shown.map((m) => document.getElementById(`month-${m.month}`)).filter(Boolean) as HTMLElement[];
-    if (headings.length === 0) return;
+    const headings = [...document.querySelectorAll<HTMLElement>('h2[id^="month-"]')];
     const onScroll = () => {
-      let current = headings[0].id;
-      for (const heading of headings) if (heading.getBoundingClientRect().top < 120) current = heading.id;
-      setActiveMonth(current.slice('month-'.length));
+      let current: HTMLElement | undefined = headings[0];
+      for (const heading of headings) if (heading.getBoundingClientRect().top < 120) current = heading;
+      if (current) setActiveMonth(current.id.slice('month-'.length));
     };
-    onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
-    return () => window.removeEventListener('scroll', onScroll);
-  }, [shown.length, searching]); // eslint-disable-line react-hooks/exhaustive-deps
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+    };
+  }, [shown, searching]);
 
   const jump = (month: string, i: number) => {
     setQuery('');
-    setWanted((n) => Math.max(n, i + 1));
-    setJumpTo(month);
+    if (month in loaded && !busy) {
+      scrollToMonth(month);
+    } else {
+      pendingJump.current = month;
+      setWanted((n) => Math.max(n, i + 1));
+    }
   };
 
   return (
@@ -305,7 +329,7 @@ export default function HistoryPage() {
               type="search"
               placeholder="Search"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => { setQuery(e.target.value); }}
               autoComplete="off"
               spellCheck={false}
             />
@@ -316,7 +340,7 @@ export default function HistoryPage() {
       {months && months.length > 1 && !searching && (
         <MonthBar aria-label="Months">
           {months.map((m, i) => (
-            <MonthChip key={m.month} type="button" $active={activeMonth === m.month} onClick={() => jump(m.month, i)}>
+            <MonthChip key={m.month} type="button" $active={activeMonth === m.month} onClick={() => { jump(m.month, i); }}>
               {formatMonth(m.month, true)}
             </MonthChip>
           ))}
@@ -334,8 +358,8 @@ export default function HistoryPage() {
           <Note>Nothing here yet.</Note>
         ) : (
           <>
-            {shown.map((m) => (
-              <MonthSection key={m.month} data={loaded[m.month]} />
+            {shown.map((data) => (
+              <MonthSection key={data.month} data={data} />
             ))}
             {failed ? <Note>Couldn’t load more.</Note> : busy && <LoadingMessage compact />}
             <Sentinel ref={sentinelRef} />

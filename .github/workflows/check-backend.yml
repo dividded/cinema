@@ -1,0 +1,46 @@
+# Type-checks, lints and tests the scraper backend (deployed to Vercel from Git).
+name: Backend
+
+on:
+  push:
+    paths:
+      - 'backend-node/**'
+      - '.github/workflows/check-backend.yml'
+  pull_request:
+    paths:
+      - 'backend-node/**'
+      - '.github/workflows/check-backend.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: backend-node
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'yarn'
+          cache-dependency-path: 'backend-node/yarn.lock'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Type-check
+        run: yarn typecheck
+
+      - name: Lint
+        run: yarn lint
+
+      - name: Test
+        run: yarn test

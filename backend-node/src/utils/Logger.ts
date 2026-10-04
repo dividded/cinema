@@ -11,6 +11,13 @@ export enum LogLevel {
   ERROR = 3,
 }
 
+function formatArg(arg: unknown): string {
+  if (typeof arg === 'string') return arg;
+  if (arg instanceof Error) return arg.message;
+  if (arg === undefined || typeof arg === 'function' || typeof arg === 'symbol') return String(arg);
+  return JSON.stringify(arg);
+}
+
 export class Logger {
   private moduleName: string;
   private static globalLogLevel: LogLevel = LogLevel.INFO;
@@ -45,6 +52,7 @@ export class Logger {
       case 'ERROR':
         Logger.setLogLevel(LogLevel.ERROR);
         break;
+      case undefined:
       default:
         // Default to INFO in production, DEBUG in development
         Logger.setLogLevel(
@@ -53,19 +61,17 @@ export class Logger {
     }
   }
 
-  private formatMessage(level: string, message: string, ...args: any[]): string {
+  private formatMessage(level: string, message: string, ...args: unknown[]): string {
     const timestamp = new Date().toISOString();
-    const formattedArgs = args.length > 0 ? ' ' + args.map(arg => 
-      typeof arg === 'object' ? JSON.stringify(arg) : String(arg)
-    ).join(' ') : '';
-    
+    const formattedArgs = args.length > 0 ? ' ' + args.map(formatArg).join(' ') : '';
+
     return `[${timestamp}] [${level}] [${this.moduleName}] ${message}${formattedArgs}`;
   }
 
   /**
    * Debug level logging - for detailed diagnostic information
    */
-  debug(message: string, ...args: any[]): void {
+  debug(message: string, ...args: unknown[]): void {
     if (Logger.globalLogLevel <= LogLevel.DEBUG) {
       console.log(this.formatMessage('DEBUG', message, ...args));
     }
@@ -74,7 +80,7 @@ export class Logger {
   /**
    * Info level logging - for general informational messages
    */
-  info(message: string, ...args: any[]): void {
+  info(message: string, ...args: unknown[]): void {
     if (Logger.globalLogLevel <= LogLevel.INFO) {
       console.log(this.formatMessage('INFO', message, ...args));
     }
@@ -83,7 +89,7 @@ export class Logger {
   /**
    * Warning level logging - for warning messages
    */
-  warn(message: string, ...args: any[]): void {
+  warn(message: string, ...args: unknown[]): void {
     if (Logger.globalLogLevel <= LogLevel.WARN) {
       console.warn(this.formatMessage('WARN', message, ...args));
     }
@@ -92,7 +98,7 @@ export class Logger {
   /**
    * Error level logging - for error messages
    */
-  error(message: string, ...args: any[]): void {
+  error(message: string, ...args: unknown[]): void {
     if (Logger.globalLogLevel <= LogLevel.ERROR) {
       console.error(this.formatMessage('ERROR', message, ...args));
     }
@@ -103,7 +109,7 @@ export class Logger {
    */
   errorWithStack(message: string, error: Error): void {
     this.error(message, error.message);
-    if (error.stack) {
+    if (error.stack !== undefined) {
       console.error(error.stack);
     }
   }

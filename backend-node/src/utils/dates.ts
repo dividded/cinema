@@ -12,8 +12,10 @@ export function getTodayInIsrael(now: Date = new Date()): string {
 
 /** The next `count` dates (YYYY-MM-DD), starting with today in Israel. */
 export function getUpcomingDates(count: number, now: Date = new Date()): string[] {
-  const [year, month, day] = getTodayInIsrael(now).split('-').map(Number);
-  return Array.from({ length: count }, (_, i) =>
-    new Date(Date.UTC(year, month - 1, day + i)).toISOString().slice(0, 10),
-  );
+  const today = new Date(`${getTodayInIsrael(now)}T00:00:00Z`);
+  return Array.from({ length: count }, (_, i) => {
+    const date = new Date(today);
+    date.setUTCDate(today.getUTCDate() + i);
+    return date.toISOString().slice(0, 10);
+  });
 }

@@ -21,10 +21,16 @@ export function useListIndex(): ListIndex | null {
 
   useEffect(() => {
     let cancelled = false;
-    const start = () =>
-      loadListIndex()
-        .then((loaded) => !cancelled && setIndex(loaded))
-        .catch((err) => console.warn('Could not load film lists:', err));
+    const start = () => {
+      loadListIndex().then(
+        (loaded) => {
+          if (!cancelled) setIndex(loaded);
+        },
+        (err: unknown) => {
+          console.warn('Could not load film lists:', err);
+        },
+      );
+    };
     if ('requestIdleCallback' in window) window.requestIdleCallback(start, { timeout: 1500 });
     else setTimeout(start, 200);
     return () => {

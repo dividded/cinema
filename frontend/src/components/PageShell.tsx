@@ -1,8 +1,7 @@
 import styled from '@emotion/styled';
-import { lazy, ReactNode, Suspense } from 'react';
+import { Link, Outlet } from '@tanstack/react-router';
+import { lazy, Suspense } from 'react';
 import { useRotatingBackground } from '../hooks/useRotatingBackground';
-import { LISTS, listPath } from '../lists/catalog';
-import { Link, useLocation } from '../router';
 import { BackgroundLayer } from './BackgroundLayer';
 import { Container } from './styled/Layout';
 
@@ -37,58 +36,47 @@ const Nav = styled.nav`
 
 /** Small links under the title: schedule and history. */
 export function MainNav() {
-  const { path } = useLocation();
   return (
     <Nav aria-label="Pages">
-      <Link to="/" aria-current={path === '/' ? 'page' : undefined}>Schedule</Link>
-      <Link to="/history" aria-current={path === '/history' ? 'page' : undefined}>History</Link>
+      <Link to="/" activeOptions={{ exact: true }}>
+        Schedule
+      </Link>
+      <Link to="/history">History</Link>
     </Nav>
   );
 }
 
-const Footer = styled.footer`
+/** Names the still at the top of the page. */
+const Credit = styled.footer`
   position: relative;
   z-index: 1;
   max-width: 820px;
   margin: 0 auto;
-  padding: 1.5rem 1.25rem 3rem;
-  border-top: 1px solid var(--line);
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem 1.25rem;
-  font-size: 0.78rem;
+  padding: 1.25rem 1.25rem 2.5rem;
+  font-size: 0.74rem;
   color: var(--muted);
 
-  span {
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    font-size: 0.68rem;
-  }
-  a {
+  i {
+    font-style: italic;
     color: var(--ink-soft);
-    text-underline-offset: 0.2em;
-    text-decoration-color: var(--line-strong);
   }
 
   @media (max-width: 768px) {
-    padding: 1.25rem 1rem 2.5rem;
+    padding: 1rem 1rem 2rem;
   }
 `;
 
-export function PageShell({ children }: { children: ReactNode }) {
+export function PageShell() {
   const { background, debug } = useRotatingBackground();
   return (
     <Container>
       <BackgroundLayer background={background} />
-      {children}
-      <Footer>
-        <span>Lists</span>
-        {LISTS.map((list) => (
-          <Link key={list.id} to={listPath(list.id)}>{list.shortName}</Link>
-        ))}
-        <Link to="/history">History</Link>
-      </Footer>
+      <Outlet />
+      {background && (
+        <Credit>
+          Top image: <i>{background.film}</i>, {background.director}, {background.year}
+        </Credit>
+      )}
       {debug && (
         <Suspense fallback={null}>
           <BackgroundDebugPanel current={background?.name ?? null} />

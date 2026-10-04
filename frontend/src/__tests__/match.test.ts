@@ -120,7 +120,7 @@ describe('matchMovie', () => {
       { id: 'tspdt-1000', films: [film(1, 'Scarface', 1932), film(2, 'Scarface', 1983)] },
     ]);
     expect(matchMovie(remakes, { title: 'x', altName: 'Scarface' })).toEqual([]);
-    expect(matchMovie(remakes, { title: 'x', altName: 'Scarface', year: 1983 })[0].rank).toBe(2);
+    expect(matchMovie(remakes, { title: 'x', altName: 'Scarface', year: 1983 }).map((hit) => hit.rank)).toEqual([2]);
   });
 
   it('allows a subtitle or suffix on one side when the year matches', () => {
