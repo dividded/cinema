@@ -8,8 +8,8 @@ export const MOVIE_FILTERS: FilterDefinition[] = [
   },
   {
     // On any of the film lists (Sight & Sound 2012, TSPDT 1000).
-    id: 'canon',
-    label: 'Canon',
+    id: 'acclaimed',
+    label: 'Acclaimed',
     predicate: (movie, { listHits }) => (listHits[movie.title]?.length ?? 0) > 0,
   },
 ];

@@ -105,7 +105,7 @@ export default function SchedulePage() {
           </SearchContainer>
         </HeaderControls>
       </Header>
-      {!schedule || (enabledFilterIds.has('canon') && !listsReady) ? (
+      {!schedule || (enabledFilterIds.has('acclaimed') && !listsReady) ? (
         <LoadingMessage compact />
       ) : filtering && filterResult.visibleMovieKeys.size === 0 ? (
         <NoMatches

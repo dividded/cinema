@@ -16,12 +16,12 @@ const visible = (enabled: string[], searchQuery = '') =>
   [...computeFilterResult(byDate, { searchQuery, enabledFilterIds: new Set(enabled) }, { listHits: { '2001': [hit] } }).visibleMovieKeys];
 
 describe('schedule filters', () => {
-  it('Canon keeps only movies on a list', () => {
-    expect(visible(['canon'])).toEqual(['2026-10-15|2001']);
+  it('Acclaimed keeps only movies on a list', () => {
+    expect(visible(['acclaimed'])).toEqual(['2026-10-15|2001']);
   });
 
   it('combines filters and search', () => {
     expect(visible(['pre-2020']).sort()).toEqual(['2026-10-15|2001', '2026-10-15|Crash']);
-    expect(visible(['pre-2020', 'canon'], 'crash')).toEqual([]);
+    expect(visible(['pre-2020', 'acclaimed'], 'crash')).toEqual([]);
   });
 });
