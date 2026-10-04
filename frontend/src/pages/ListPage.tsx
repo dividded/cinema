@@ -8,7 +8,7 @@ import { LoadingMessage } from '../components/styled/Feedback';
 import { Header, TitleBlock } from '../components/styled/Layout';
 import { fetchScreened, ScreenedMovie, useLoaded } from '../hooks/useHistoryData';
 import { filmAnchor, imdbUrl, LISTS, ListFilm, ListInfo, listPath } from '../lists/catalog';
-import { filmTitles, movieMatchesFilm, movieTitleKeys, titleKey } from '../lists/match';
+import { buildListIndex, filmTitles, matchMovie } from '../lists/match';
 import { Link } from '../router';
 import { getTodayInIsrael } from '../utils/dateTime';
 import { formatShortDate } from '../utils/format';
@@ -270,24 +270,20 @@ interface Screened {
   screenings: string[];
 }
 
-/** Which screened movies are each list film (by index into films). */
-function matchScreenings(films: readonly ListFilm[], movies: readonly ScreenedMovie[]): Map<number, Screened> {
-  const moviesByKey = new Map<string, ScreenedMovie[]>();
+/** Which screened movies are each list film (by index into films), with the badges' matching. */
+function matchScreenings(list: ListInfo, films: readonly ListFilm[], movies: readonly ScreenedMovie[]): Map<number, Screened> {
+  const index = buildListIndex([{ id: list.id, films }]);
+  const position = new Map(films.map((film, i) => [film, i]));
+  const result = new Map<number, Screened>();
   for (const movie of movies) {
-    for (const key of movieTitleKeys(movie)) {
-      const list = moviesByKey.get(key) ?? [];
-      list.push(movie);
-      moviesByKey.set(key, list);
+    for (const hit of matchMovie(index, movie)) {
+      const i = position.get(hit.film)!;
+      const entry = result.get(i) ?? { movies: [], screenings: [] };
+      entry.movies.push(movie);
+      entry.screenings = [...new Set([...entry.screenings, ...movie.screenings])].sort();
+      result.set(i, entry);
     }
   }
-  const result = new Map<number, Screened>();
-  films.forEach((film, i) => {
-    const candidates = new Set(filmTitles(film).flatMap((title) => moviesByKey.get(titleKey(title)) ?? []));
-    const matched = [...candidates].filter((movie) => movieMatchesFilm(movie, film));
-    if (matched.length === 0) return;
-    const screenings = [...new Set(matched.flatMap((m) => m.screenings))].sort();
-    result.set(i, { movies: matched, screenings });
-  });
   return result;
 }
 
@@ -410,8 +406,8 @@ export default function ListPage({ list }: { list: ListInfo }) {
   }, [list]);
 
   const screened = useMemo(
-    () => (films && screenedMovies ? matchScreenings(films, screenedMovies) : new Map<number, Screened>()),
-    [films, screenedMovies],
+    () => (films && screenedMovies ? matchScreenings(list, films, screenedMovies) : new Map<number, Screened>()),
+    [list, films, screenedMovies],
   );
   const searchText = useMemo(() => films?.map(filmSearchText) ?? [], [films]);
 
