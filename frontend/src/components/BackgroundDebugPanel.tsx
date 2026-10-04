@@ -15,6 +15,7 @@ const Bar = styled.div`
   width: min(calc(100vw - 1rem), 760px);
   background: rgba(26, 25, 22, 0.88);
   color: #f3f1eb;
+  text-shadow: none;
   border-radius: 12px;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
   backdrop-filter: blur(8px);
@@ -127,6 +128,7 @@ const Pill = styled.button`
   padding: 0.5rem 0.85rem;
   background: rgba(26, 25, 22, 0.85);
   color: #f3f1eb;
+  text-shadow: none;
   font-size: 0.75rem;
   font-weight: 600;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);

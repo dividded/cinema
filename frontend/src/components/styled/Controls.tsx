@@ -60,13 +60,18 @@ export const FilterToggle = styled.button<{ $active?: boolean }>`
   text-transform: uppercase;
   color: ${props => (props.$active === true ? 'var(--bg-elevated)' : 'var(--ink)')};
   background: ${props => (props.$active === true ? 'var(--ink)' : 'transparent')};
+  text-shadow: ${props => (props.$active === true ? 'none' : 'inherit')};
   box-shadow: inset 0 -1px 0 ${props => (props.$active === true ? 'var(--ink)' : 'rgba(26, 25, 22, 0.35)')};
   transition: color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease, transform 0.15s ease;
   opacity: ${props => (props.$active === true ? 1 : 0.78)};
 
-  &:hover {
-    opacity: 1;
-    box-shadow: inset 0 -1px 0 var(--ink);
+  /* Only for a real pointer: a tap would leave the hover look on until the next tap elsewhere,
+     so a filter just switched off looked different from the others. */
+  @media (hover: hover) {
+    &:hover {
+      opacity: 1;
+      box-shadow: inset 0 -1px 0 var(--ink);
+    }
   }
 
   &:active {

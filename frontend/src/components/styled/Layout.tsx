@@ -8,6 +8,7 @@ export const Container = styled.div`
   min-height: 100vh;
   color: var(--ink);
   font-size: 1rem;
+  text-shadow: var(--halo);
   isolation: isolate;
 `
 

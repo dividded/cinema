@@ -21,12 +21,19 @@ const Nav = styled.nav`
   a {
     color: var(--ink-soft);
     text-decoration: none;
-    padding-bottom: 0.1rem;
-    border-bottom: 1px solid transparent;
-    opacity: 0.75;
+    padding-bottom: 0.15rem;
+    border-bottom: 2px solid transparent;
+    opacity: 0.7;
     transition: opacity 0.15s ease, border-color 0.15s ease;
   }
-  a:hover,
+  @media (hover: hover) {
+    a:hover {
+      opacity: 1;
+      color: var(--ink);
+      border-bottom-color: var(--line-strong);
+    }
+  }
+  /* The page you are on: full ink with a thick rule, unlike the filters' filled chips. */
   a[aria-current='page'] {
     opacity: 1;
     color: var(--ink);

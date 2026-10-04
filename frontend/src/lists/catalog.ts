@@ -88,16 +88,3 @@ export const imdbUrl = (id: string): string => `https://www.imdb.com/title/${id}
 /** Anchor of a film on its list page, so a badge can scroll to and open it. */
 export const filmAnchor = (rank: number, imdb?: string): string =>
   imdb !== undefined && imdb !== '' ? `film-${imdb}` : `rank-${rank}`;
-
-/**
- * Where a ranked list crosses its nominal size: ranks come from vote counts, so the last tie
- * can straddle the cut-off (99 films share #224 in the directors' poll). Returns the index
- * where that tie starts, or null when the list fits.
- */
-export function cutoffTie(films: readonly ListFilm[], size: number): { start: number; rank: number } | null {
-  if (films.length <= size) return null;
-  const last = films[size - 1];
-  if (!last) return null;
-  const start = films.findIndex((film) => film.rank === last.rank);
-  return { start, rank: last.rank };
-}

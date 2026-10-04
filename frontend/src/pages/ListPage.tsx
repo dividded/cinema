@@ -9,7 +9,7 @@ import { NoMatches } from '../components/NoMatches';
 import { Header, TitleBlock } from '../components/styled/Layout';
 import { fetchScreened, useLoaded } from '../hooks/useHistoryData';
 import { ScreenedMovie } from '../types/movie';
-import { cutoffTie, filmAnchor, imdbUrl, listById, LISTS, ListFilm, ListInfo } from '../lists/catalog';
+import { filmAnchor, imdbUrl, listById, LISTS, ListFilm, ListInfo } from '../lists/catalog';
 import { buildListIndex, filmTitles, matchMovie } from '../lists/match';
 import { Link, useLocation, useParams } from '@tanstack/react-router';
 import { getTodayInIsrael } from '../utils/dateTime';
@@ -94,7 +94,8 @@ const Rows = styled.ol`
   list-style: none;
 `;
 
-const TieHeader = styled.h3`
+/** Splits the Screening filter's results into coming up and shown before. */
+const SectionHeader = styled.h3`
   margin-top: 1.75rem;
   padding: 0 0.25rem 0.5rem 0.5rem;
   border-bottom: 1px solid var(--line-strong);
@@ -103,7 +104,12 @@ const TieHeader = styled.h3`
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--ink-soft);
+
+  &:first-of-type {
+    margin-top: 0.75rem;
+  }
 `;
+
 const Row = styled.li<{ $screened: boolean; $flash: boolean }>`
   border-bottom: 1px solid rgba(20, 20, 20, 0.09);
   border-left: 2px solid ${(p) => (p.$screened ? 'var(--classic-line)' : 'transparent')};
@@ -446,9 +452,29 @@ function ListPage({ list }: { list: ListInfo }) {
     );
   }, [entries, deferredQuery, onlyScreened, screened]);
 
-  const tie = useMemo(() => (films ? cutoffTie(films, list.size) : null), [films, list.size]);
-  const ranked = tie ? visible.filter(({ index }) => index < tie.start) : visible;
-  const tied = tie ? visible.filter(({ index }) => index >= tie.start) : [];
+  // With the Screening filter on, films coming up go first, then the ones shown before.
+  const soon = onlyScreened
+    ? visible.filter(({ index }) => screened.get(index)?.screenings.some((dateTime) => dateTime.slice(0, 10) >= today) === true)
+    : [];
+  const before = onlyScreened ? visible.filter((entry) => !soon.includes(entry)) : [];
+
+  const rows = (subset: typeof visible) => (
+    <Rows>
+      {subset.map(({ film, index }) => (
+        <FilmRow
+          key={index}
+          film={film}
+          screened={screened.get(index)}
+          open={open.has(index)}
+          flash={flash === index}
+          onToggle={() => {
+            toggle(index);
+          }}
+          today={today}
+        />
+      ))}
+    </Rows>
+  );
 
   // A badge links to #film-<imdb>: open that film and bring it into view.
   const hash = useLocation({ select: (location) => location.hash });
@@ -534,44 +560,23 @@ function ListPage({ list }: { list: ListInfo }) {
               setOnlyScreened(false);
             }}
           />
-        ) : (
+        ) : onlyScreened ? (
           <>
-            <Rows>
-              {ranked.map(({ film, index }) => (
-                <FilmRow
-                  key={index}
-                  film={film}
-                  screened={screened.get(index)}
-                  open={open.has(index)}
-                  flash={flash === index}
-                  onToggle={() => {
-                    toggle(index);
-                  }}
-                  today={today}
-                />
-              ))}
-            </Rows>
-            {tie && tied.length > 0 && (
+            {soon.length > 0 && (
               <>
-                <TieHeader>Also tied at #{tie.rank}</TieHeader>
-                <Rows>
-                  {tied.map(({ film, index }) => (
-                    <FilmRow
-                      key={index}
-                      film={film}
-                      screened={screened.get(index)}
-                      open={open.has(index)}
-                      flash={flash === index}
-                      onToggle={() => {
-                        toggle(index);
-                      }}
-                      today={today}
-                    />
-                  ))}
-                </Rows>
+                <SectionHeader>Screening soon</SectionHeader>
+                {rows(soon)}
+              </>
+            )}
+            {before.length > 0 && (
+              <>
+                <SectionHeader>Previously screened</SectionHeader>
+                {rows(before)}
               </>
             )}
           </>
+        ) : (
+          rows(visible)
         )}
       </Page>
     </>
