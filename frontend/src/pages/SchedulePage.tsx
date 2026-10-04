@@ -22,6 +22,7 @@ import { MOVIE_FILTERS } from '../filters/registry';
 import { MovieFilterState } from '../filters/types';
 import { useMovieIndex } from '../hooks/useMovieIndex';
 import { useListHits } from '../hooks/useListHits';
+import { useListIndex } from '../hooks/useListIndex';
 import { useSchedule } from '../hooks/useSchedule';
 
 const NO_MOVIES: Movie[] = [];
@@ -37,6 +38,7 @@ export default function SchedulePage() {
   const deferredSearchQuery = useDeferredValue(searchQuery);
   const movieIndex = useMovieIndex(schedule?.movies ?? NO_MOVIES, schedule?.dates ?? NO_DATES);
   const listHits = useListHits(schedule?.movies ?? NO_MOVIES);
+  const listsReady = useListIndex() !== null;
 
   const filterState = useMemo<MovieFilterState>(
     () => ({
@@ -47,9 +49,11 @@ export default function SchedulePage() {
   );
 
   const filterResult = useMemo(
-    () => computeFilterResult(movieIndex.moviesByDate, filterState),
-    [movieIndex.moviesByDate, filterState],
+    () => computeFilterResult(movieIndex.moviesByDate, filterState, { listHits }),
+    [movieIndex.moviesByDate, filterState, listHits],
   );
+
+  const filtering = deferredSearchQuery.trim() !== '' || enabledFilterIds.size > 0;
 
   const toggleFilter = (filterId: string) => {
     setEnabledFilterIds((current) => {
@@ -101,22 +105,19 @@ export default function SchedulePage() {
           </SearchContainer>
         </HeaderControls>
       </Header>
-      {schedule ? (
-        <>
-          <MovieSchedule index={movieIndex} filterResult={filterResult} listHits={listHits} />
-          {filterResult.visibleMovieKeys.size === 0 && (
-            <NoMatches
-              query={deferredSearchQuery}
-              filters={MOVIE_FILTERS.filter((filter) => enabledFilterIds.has(filter.id)).map((filter) => filter.label)}
-              onClear={() => {
-                setSearchQuery('');
-                setEnabledFilterIds(new Set());
-              }}
-            />
-          )}
-        </>
-      ) : (
+      {!schedule || (enabledFilterIds.has('canon') && !listsReady) ? (
         <LoadingMessage compact />
+      ) : filtering && filterResult.visibleMovieKeys.size === 0 ? (
+        <NoMatches
+          query={deferredSearchQuery}
+          filters={MOVIE_FILTERS.filter((filter) => enabledFilterIds.has(filter.id)).map((filter) => filter.label)}
+          onClear={() => {
+            setSearchQuery('');
+            setEnabledFilterIds(new Set());
+          }}
+        />
+      ) : (
+        <MovieSchedule index={movieIndex} filterResult={filterResult} listHits={listHits} />
       )}
     </>
   );

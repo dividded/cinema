@@ -1,12 +1,15 @@
 import styled from '@emotion/styled';
 
 const Box = styled.div`
+  /* Above the background image's wash, which otherwise paints over it. */
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   justify-content: center;
   gap: 0.4rem 0.9rem;
-  padding: 1.75rem 0;
+  padding: 0.5rem 1rem 1.5rem;
   text-align: center;
 
   p {

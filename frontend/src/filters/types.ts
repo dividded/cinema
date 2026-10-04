@@ -1,6 +1,13 @@
+import type { ListHitsByTitle } from '../hooks/useListHits';
 import { Movie } from '../types/movie';
 
-export type MoviePredicate = (movie: Movie) => boolean;
+/** What filters can look at besides the movie itself. */
+export interface FilterContext {
+  /** The lists each movie title is on (empty until the lists have loaded). */
+  listHits: ListHitsByTitle;
+}
+
+export type MoviePredicate = (movie: Movie, context: FilterContext) => boolean;
 
 export interface FilterDefinition {
   id: string;
