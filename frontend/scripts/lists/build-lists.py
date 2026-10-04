@@ -227,6 +227,36 @@ DETAILS_QUERY = '''SELECT ?item ?imdb ?date ?dirLabel ?en ?he ?orig ?alias WHERE
 }}'''
 
 
+def simple_key(title: str) -> str:
+    title = re.sub(r'^(the|a|an|l\'|le|la|les)\s*', '', fold(title))
+    return re.sub(r'[^a-z0-9]', '', title.replace('&', 'and'))
+
+
+def by_director(entries: list[dict]) -> None:
+    """Last resort for short or common titles (M, Ran, Z): search the director's own films."""
+    for e in entries:
+        names = [n.strip() for n in re.split(r'\s*(?:/|&)\s*', e['director']) if n.strip()]
+        if not names or e['year'] is None:
+            continue
+        query = f'''SELECT DISTINCT ?item ?label ?alias WHERE {{
+          ?director rdfs:label {lit(names[0])}@en .
+          ?item wdt:P57 ?director ; wdt:P345 ?imdb ; wdt:P577 ?date .
+          FILTER(STRSTARTS(?imdb, "tt") && YEAR(?date) >= {e['year'] - 1} && YEAR(?date) <= {e['year'] + 1})
+          OPTIONAL {{ ?item rdfs:label ?label . FILTER(LANG(?label) IN ("en", "mul")) }}
+          OPTIONAL {{ ?item skos:altLabel ?alias . FILTER(LANG(?alias) = "en") }}
+        }}'''
+        try:
+            rows = sparql(query, retries=2)
+        except RuntimeError:
+            continue
+        wanted = {simple_key(t) for t in [e['title'], *e['alt']]}
+        hits = {r['item'].rsplit('/', 1)[1] for r in rows
+                if simple_key(r.get('label', '')) in wanted or simple_key(r.get('alias', '')) in wanted}
+        if len(hits) == 1:
+            e['qid'] = hits.pop()
+        time.sleep(0.3)
+
+
 def details_rows(qids: list[str]) -> list[dict]:
     """Details for some items; a batch that keeps failing is split in half, a lone failing item skipped."""
     try:
@@ -313,7 +343,15 @@ def resolve(lists: dict[str, list[dict]]) -> None:
     new = set().union(*candidates.values()) - set(info)
     info.update(details(new))
     for e in missing:
-        pick(e, last_pass=True)
+        pick(e, last_pass=False)
+
+    missing = [e for e in missing if 'qid' not in e]
+    print(f'Searching the directors of {len(missing)} unresolved films...')
+    by_director(missing)
+    info.update(details({e['qid'] for e in missing if 'qid' in e} - set(info)))
+    for e in missing:
+        if 'qid' not in e:
+            print(f'  unresolved: {e["title"]} ({e["year"]}) {e["director"]}')
 
     for e in entries:
         d = info.get(e.get('qid', ''))
