@@ -10,7 +10,7 @@ const Box = styled.div`
   text-align: center;
 
   p {
-    color: var(--ink-soft);
+    color: var(--ink);
     font-family: 'Cormorant Garamond Variable', 'Cormorant Garamond', Georgia, serif;
     font-style: italic;
     font-size: 1.15rem;

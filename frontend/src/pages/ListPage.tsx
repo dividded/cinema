@@ -94,40 +94,16 @@ const Rows = styled.ol`
   list-style: none;
 `;
 
-const TieHeader = styled.button`
-  appearance: none;
-  display: block;
-  width: 100%;
-  margin-top: 1.5rem;
-  padding: 0.85rem 0.75rem;
-  border: 1px dashed var(--line-strong);
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.25);
-  color: inherit;
-  text-align: left;
-  font: inherit;
-
-  &:not(:disabled):hover {
-    background: rgba(255, 255, 255, 0.45);
-  }
-  &:disabled {
-    cursor: default;
-  }
-
-  .title {
-    display: block;
-    font-weight: 700;
-    font-size: 0.9rem;
-  }
-  .title::after {
-    content: ' ▸';
-    color: var(--muted);
-  }
-  &[aria-expanded='true'] .title::after {
-    content: ' ▾';
-  }
+const TieHeader = styled.h3`
+  margin-top: 1.75rem;
+  padding: 0 0.25rem 0.5rem 0.5rem;
+  border-bottom: 1px solid var(--line-strong);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
 `;
-
 const Row = styled.li<{ $screened: boolean; $flash: boolean }>`
   border-bottom: 1px solid rgba(20, 20, 20, 0.09);
   border-left: 2px solid ${(p) => (p.$screened ? 'var(--classic-line)' : 'transparent')};
@@ -446,7 +422,6 @@ function ListPage({ list }: { list: ListInfo }) {
   const [onlyScreened, setOnlyScreened] = useState(false);
   const [open, setOpen] = useState<ReadonlySet<number>>(() => new Set());
   const [flash, setFlash] = useState<number | null>(null);
-  const [showTie, setShowTie] = useState(false);
   const deferredQuery = useDeferredValue(query);
   const today = getTodayInIsrael();
 
@@ -472,10 +447,8 @@ function ListPage({ list }: { list: ListInfo }) {
   }, [entries, deferredQuery, onlyScreened, screened]);
 
   const tie = useMemo(() => (films ? cutoffTie(films, list.size) : null), [films, list.size]);
-  const filtering = onlyScreened || deferredQuery.trim() !== '';
   const ranked = tie ? visible.filter(({ index }) => index < tie.start) : visible;
   const tied = tie ? visible.filter(({ index }) => index >= tie.start) : [];
-  const tieOpen = showTie || filtering;
 
   // A badge links to #film-<imdb>: open that film and bring it into view.
   const hash = useLocation({ select: (location) => location.hash });
@@ -483,10 +456,8 @@ function ListPage({ list }: { list: ListInfo }) {
     if (!films || hash === '') return;
     const i = films.findIndex((film) => filmAnchor(film.rank, film.imdb) === hash);
     if (i < 0) return;
-    const tieStart = cutoffTie(films, list.size)?.start;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const frame = requestAnimationFrame(() => {
-      if (tieStart !== undefined && i >= tieStart) setShowTie(true);
       setOpen(new Set([i]));
       setFlash(i);
       requestAnimationFrame(() => document.getElementById(hash)?.scrollIntoView({ block: 'center' }));
@@ -582,26 +553,22 @@ function ListPage({ list }: { list: ListInfo }) {
             </Rows>
             {tie && tied.length > 0 && (
               <>
-                <TieHeader type="button" aria-expanded={tieOpen} onClick={() => { setShowTie((v) => !v); }} disabled={filtering}>
-                  <span className="title">Also tied at #{tie.rank}</span>
-                </TieHeader>
-                {tieOpen && (
-                  <Rows>
-                    {tied.map(({ film, index }) => (
-                      <FilmRow
-                        key={index}
-                        film={film}
-                        screened={screened.get(index)}
-                        open={open.has(index)}
-                        flash={flash === index}
-                        onToggle={() => {
-                          toggle(index);
-                        }}
-                        today={today}
-                      />
-                    ))}
-                  </Rows>
-                )}
+                <TieHeader>Also tied at #{tie.rank}</TieHeader>
+                <Rows>
+                  {tied.map(({ film, index }) => (
+                    <FilmRow
+                      key={index}
+                      film={film}
+                      screened={screened.get(index)}
+                      open={open.has(index)}
+                      flash={flash === index}
+                      onToggle={() => {
+                        toggle(index);
+                      }}
+                      today={today}
+                    />
+                  ))}
+                </Rows>
               </>
             )}
           </>
